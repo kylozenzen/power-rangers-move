@@ -1,26 +1,9 @@
 /* ============ DATA ============
-   Exercise library, categories, tiers live in /data/*.js,
-   loaded before this file in index.html. Available as globals:
-   LIB, CATS, CAT_COLOR, MUSCLES, MUSCLE_COLOR, TEMPLATES.
+   All static content lives in /data/*.js, loaded before this
+   file in index.html. Available as globals:
+   LIB, CATS, CAT_COLOR, MUSCLES, MUSCLE_COLOR, TEMPLATES,
+   TIERS, EQUIV.
    ================================ */
-
-/* Tiers + weight equivalences stay here (tied to app logic, not content) */
-const TIERS = [
-  {n:"Spark",at:0},{n:"Glow",at:25000},{n:"Flux",at:100000},{n:"Surge",at:250000},
-  {n:"Pulse",at:500000},{n:"Current",at:1000000},{n:"Plasma",at:2500000},
-  {n:"Aurora",at:5000000},{n:"Infinity",at:10000000}
-];
-// equivalence reference, weights in lb
-const EQUIV = [
-  ["a house cat",10,"🐈"],["a car tire",25,"🛞"],["a microwave",40,"📦"],["a sack of cement",94,"🧱"],
-  ["a baby grand piano",500,"🎹"],["a vending machine",600,"🥤"],["a grand piano",990,"🎹"],
-  ["a horse",1000,"🐎"],["a grizzly bear",1300,"🐻"],["a dairy cow",1400,"🐄"],
-  ["a small car",2400,"🚗"],["a sedan",3500,"🚙"],["a pickup truck",5000,"🛻"],
-  ["a killer whale",8000,"🐳"],["an elephant",12000,"🐘"],["a T. rex",16000,"🦖"],
-  ["a school bus",24000,"🚌"],["a semi truck",35000,"🚛"],["a house",150000,"🏠"],
-  ["the Statue of Liberty",450000,"🗽"],["a blue whale",300000,"🐋"],["a Boeing 747",400000,"✈️"],
-  ["the Eiffel Tower",16000000,"🗼"]
-];
 
 /* ============ STATE ============ */
 let state = {
@@ -310,15 +293,31 @@ function renderStats(){
 /* ============ WORKOUT ============ */
 function renderWorkout(){
   if(!state.active){
-    $("#view").innerHTML=`
-    <div class="empty" style="padding-top:60px">
-      <div class="glyph spectrum-text">⊕</div>
-      <h3>Ready when you are</h3>
-      <p>Start a session, drop in your exercises, and log sets as you go. Hit finish when you're done — that's it.</p>
-      <button class="btn btn-primary spectrum-bg" onclick="startWorkout()">
-        <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Start workout
-      </button>
-    </div>`;
+    const last=state.workouts[state.workouts.length-1];
+    let html=`<div class="screen-h" style="margin-top:4px"><h2>Start a workout</h2></div>
+    <button class="btn btn-primary spectrum-bg" onclick="startWorkout()" style="margin-bottom:10px">
+      <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> New empty workout
+    </button>`;
+
+    if(last){
+      const names=last.exercises.map(e=>e.name).join(", ");
+      html+=`<button class="btn btn-ghost" onclick="repeatLast()" style="margin-bottom:22px;flex-direction:column;align-items:stretch;gap:4px;padding:15px 17px;text-align:left">
+        <span style="display:flex;align-items:center;gap:9px;font-weight:700"><svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:currentColor;stroke-width:2.2;fill:none"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 014-4h14M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 01-4 4H3"/></svg> Repeat last session</span>
+        <span style="font-size:12px;color:var(--ink3);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(names)}</span>
+      </button>`;
+    }
+
+    html+=`<div class="filt-label" style="margin:0 2px 10px">Or start from a routine</div>
+      <div class="tpl-grid">`;
+    TEMPLATES.forEach(t=>{
+      html+=`<button class="tpl" onclick="startFromTemplate('${t.id}')">
+        <span class="tpl-n">${esc(t.name)}</span>
+        <span class="tpl-t">${esc(t.tag)}</span>
+        <span class="tpl-c">${t.exercises.length} exercises</span>
+      </button>`;
+    });
+    html+=`</div><div style="height:20px"></div>`;
+    $("#view").innerHTML=html;
     return;
   }
   const a=state.active;
@@ -330,14 +329,18 @@ function renderWorkout(){
   a.exercises.forEach((e,ei)=>{
     const col=CAT_COLOR[e.cat]||"#ff7ad9";
     const exVol=e.sets.reduce((t,s)=>t+(+s.w||0)*(+s.r||0),0);
+    const logged=isLogged(e);
 
     if(e.collapsed){
-      html+=`<div class="ex collapsed">
+      const summary = logged
+        ? `<span class="ex-sum mono">${e.sets.length} set${e.sets.length!==1?'s':''} · ${fmt(exVol)} ${state.unit}</span>`
+        : `<span class="ex-sum todo">tap to log</span>`;
+      html+=`<div class="ex collapsed ${logged?'':'pending'}">
         <div class="ex-h" onclick="toggleCollapse(${ei})">
-          <button class="ex-check done spectrum-bg" onclick="event.stopPropagation();toggleCollapse(${ei})"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></button>
+          <button class="ex-check ${logged?'done spectrum-bg':''}" onclick="event.stopPropagation();toggleCollapse(${ei})"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></button>
           <span class="pill" style="background:${col}22;color:${col}">${e.cat}</span>
           <span class="nm">${esc(e.name)}</span>
-          <span class="ex-sum mono">${e.sets.length} set${e.sets.length!==1?'s':''} · ${fmt(exVol)} ${state.unit}</span>
+          ${summary}
           <button class="x" onclick="event.stopPropagation();removeEx(${ei})">×</button>
         </div>
       </div>`;
@@ -392,7 +395,35 @@ function renderWorkout(){
   $("#view").innerHTML=html;
 }
 
-function startWorkout(){state.active={id:Date.now(),date:new Date().toISOString(),startedAt:Date.now(),exercises:[]};save();requestWake();openPicker();renderWorkout();}
+function blankSession(){return{id:Date.now(),date:new Date().toISOString(),startedAt:Date.now(),exercises:[]};}
+function startWorkout(){state.active=blankSession();save();requestWake();openPicker();renderWorkout();}
+function addExFromName(name){
+  const l=LIB.find(x=>x[0]===name);
+  const cat=l?l[1]:"Custom", tip=l?l[2]:"", muscle=l?l[3]:"Other";
+  const ex={name,cat,tip,muscle,collapsed:true,sets:[{w:0,r:cat==="Bodyweight"?8:0,done:false}]};
+  const top=lastTopSet(name);
+  if(top){ex.sets=[{w:top.w,r:top.r,done:false}];}
+  state.active.exercises.push(ex);
+}
+function repeatLast(){
+  const last=state.workouts[state.workouts.length-1];
+  if(!last)return;
+  state.active=blankSession();
+  last.exercises.forEach(e=>addExFromName(e.name));
+  save();requestWake();renderWorkout();
+  toast("Loaded your last session");
+}
+function startFromTemplate(id){
+  const t=TEMPLATES.find(x=>x.id===id);
+  if(!t)return;
+  state.active=blankSession();
+  t.exercises.forEach(name=>addExFromName(name));
+  save();requestWake();renderWorkout();
+  toast(t.name+" loaded");
+}
+function isLogged(e){
+  return e.sets.some(s=> (+s.w>0 && +s.r>0) || (e.cat==='Bodyweight' && +s.r>0 && s.done));
+}
 function cancelWorkout(){if(confirm("Discard this session? Nothing will be saved.")){cancelRest();releaseWake();state.active=null;save();renderWorkout();}}
 function removeEx(i){state.active.exercises.splice(i,1);save();renderWorkout();}
 function addSet(ei){const sets=state.active.exercises[ei].sets;const last=sets[sets.length-1];sets.push(last?{w:last.w,r:last.r,done:false}:{w:0,r:8,done:false});save();renderWorkout();}
@@ -463,12 +494,12 @@ function detectPRs(a){
   return prs;
 }
 
-/* ============ PICKER ============ */
-let pickerCat="All", pickerMuscle="All", pickerQ="", pickerList=[];
+/* ============ PICKER (multi-select) ============ */
+let pickerCat="All", pickerMuscle="All", pickerQ="", pickerList=[], pickerSel=[];
 function openPicker(){
   if(!state.active)startWorkout();
-  pickerCat="All";pickerMuscle="All";pickerQ="";
-  $("#sheet-title").textContent="Add exercise";
+  pickerCat="All";pickerMuscle="All";pickerQ="";pickerSel=[];
+  $("#sheet-title").textContent="Add exercises";
   renderPicker();
   openSheet();
 }
@@ -490,32 +521,65 @@ function renderPicker(){
     <div class="exlist">`;
   pickerList.forEach((l,i)=>{
     const col=CAT_COLOR[l[1]];const mcol=MUSCLE_COLOR[l[3]]||"#6f6b82";const top=lastTopSet(l[0]);
-    html+=`<div class="item" onclick="addByIndex(${i})">
+    const on=pickerSel.includes(l[0]);
+    html+=`<div class="item ${on?'sel':''}" onclick="toggleSel('${escAttr(l[0])}')">
+      <span class="checkbox ${on?'on spectrum-bg':''}"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span>
       <span class="pill" style="background:${col}22;color:${col}">${l[1].slice(0,3)}</span>
       <span class="nm">${esc(l[0])}<span class="mtag" style="color:${mcol}">${l[3]||""}</span></span>
-      ${top?`<span class="last">${top.w}×${top.r}</span>`:""}
-      <span class="plus">+</span></div>`;
+      ${top?`<span class="last">${top.w}×${top.r}</span>`:""}</div>`;
   });
   if(!pickerList.length && !pickerQ.trim()){
     html+=`<div class="picker-empty">No exercises match those filters.</div>`;
   }
   if(pickerQ.trim() && !LIB.some(l=>l[0].toLowerCase()===q)){
-    html+=`<div class="item" onclick="addCustom()" style="border-top:1px solid var(--line2)">
+    const n=pickerQ.trim(); const on=pickerSel.includes(n);
+    html+=`<div class="item ${on?'sel':''}" onclick="toggleSel('${escAttr(n)}')" style="border-top:1px solid var(--line2)">
+      <span class="checkbox ${on?'on spectrum-bg':''}"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span>
       <span class="pill" style="background:#ff7ad922;color:#ff7ad9">NEW</span>
-      <span class="nm">Add "${esc(pickerQ.trim())}"</span><span class="plus">+</span></div>`;
+      <span class="nm">Add "${esc(n)}"</span></div>`;
   }
-  html+=`</div>`;
+  html+=`</div><div style="height:84px"></div>`;
   $("#sheet-body").innerHTML=html;
+  renderPickerFooter();
+}
+function renderPickerFooter(){
+  let f=$("#picker-footer");
+  if(!f){
+    f=document.createElement("div"); f.id="picker-footer"; f.className="picker-footer";
+    $("#sheet").appendChild(f);
+  }
+  const n=pickerSel.length;
+  f.innerHTML=`<button class="btn btn-primary spectrum-bg" ${n?'':'disabled'} onclick="commitPicker()">
+    ${n?`Add ${n} exercise${n!==1?'s':''}`:'Select exercises to add'}</button>`;
+  f.classList.toggle("show", n>0);
+}
+function toggleSel(name){
+  const i=pickerSel.indexOf(name);
+  if(i>=0)pickerSel.splice(i,1); else {pickerSel.push(name);haptic();}
+  renderPicker();
 }
 function reFocus(){const el=$("#pq");if(el){el.focus();el.setSelectionRange(el.value.length,el.value.length);}}
-function addByIndex(i){const l=pickerList[i];if(l)addExercise(l[0],l[1],l[2],l[3]);}
-function addCustom(){const n=pickerQ.trim();if(n)addExercise(n,"Custom","",pickerMuscle!=="All"?pickerMuscle:"Other");}
+function commitPicker(){
+  if(!pickerSel.length)return;
+  pickerSel.forEach(name=>{
+    const l=LIB.find(x=>x[0]===name);
+    if(l) addExercise(l[0],l[1],l[2],l[3]);
+    else  addExercise(name,"Custom","",pickerMuscle!=="All"?pickerMuscle:"Other");
+  });
+  const n=pickerSel.length;
+  pickerSel=[];
+  removePickerFooter();
+  closeSheet();
+  renderWorkout();
+  toast(`${n} exercise${n!==1?'s':''} added`);
+}
+function removePickerFooter(){const f=$("#picker-footer");if(f)f.remove();}
 function addExercise(name,cat,tip,muscle){
-  state.active.exercises.push({name,cat,tip,muscle:muscle||"Other",sets:[{w:0,r:cat==="Bodyweight"?8:0,done:false}]});
-  // prefill from history
+  const ex={name,cat,tip,muscle:muscle||"Other",collapsed:true,sets:[{w:0,r:cat==="Bodyweight"?8:0,done:false}]};
   const top=lastTopSet(name);
-  if(top){state.active.exercises[state.active.exercises.length-1].sets=[{w:top.w,r:top.r,done:false}];}
-  save();closeSheet();renderWorkout();toast(name+" added");
+  if(top){ex.sets=[{w:top.w,r:top.r,done:false}];}
+  state.active.exercises.push(ex);
+  save();
 }
 
 /* ============ DETAIL ============ */
@@ -636,9 +700,10 @@ function loadSampleData(){
 
 /* ============ SHEET ============ */
 function openSheet(){$("#scrim").classList.add("open");$("#sheet").classList.add("open");}
-function closeSheet(){$("#scrim").classList.remove("open");$("#sheet").classList.remove("open");}
+function closeSheet(){$("#scrim").classList.remove("open");$("#sheet").classList.remove("open");if(typeof removePickerFooter==="function")removePickerFooter();}
 
 function esc(s){return String(s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function escAttr(s){return String(s||"").replace(/\\/g,"\\\\").replace(/'/g,"\\'").replace(/"/g,"&quot;");}
 
 /* ---- wake lock: keep screen on during a workout ---- */
 let wakeLock=null;
