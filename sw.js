@@ -1,10 +1,11 @@
-const CACHE = 'moved-v3';
+const CACHE = 'moved-v4';
 const SHELL = [
   './',
   './index.html',
   './app.css',
   './app.js',
   './data/exercises.js',
+  './data/tiers.js',
   './data/workout-templates.js',
   './manifest.json',
   './icons/logo-mark.png',
