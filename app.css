@@ -170,6 +170,9 @@ nav{
 .ex.collapsed .ex-h{cursor:pointer;border-bottom:none}
 .ex.collapsed{opacity:.92}
 .ex-sum{flex:none;font-size:11px;color:var(--ink3);font-weight:600;white-space:nowrap;font-variant-numeric:tabular-nums}
+.ex-sum.todo{color:var(--accent);opacity:.85}
+.ex.collapsed.pending{opacity:1}
+.ex.collapsed.pending .nm{color:var(--ink)}
 .ex.collapsed .nm{font-weight:600;color:var(--ink2)}
 .ex-done{width:100%;padding:12px;color:var(--ink2);font-size:13px;font-weight:700;border-top:1px solid var(--line);display:flex;align-items:center;justify-content:center;gap:7px}
 .ex-done:active{color:var(--ink);background:var(--card2)}
@@ -224,6 +227,20 @@ nav{
 .cat.active{color:#0a0a0d;border-color:transparent}
 
 .exlist .item{display:flex;align-items:center;gap:12px;padding:13px 4px;border-bottom:1px solid var(--line)}
+.exlist .item.sel{background:rgba(168,85,247,.07)}
+.checkbox{width:24px;height:24px;flex:none;border-radius:7px;border:1.5px solid var(--line2);display:grid;place-items:center;transition:.12s}
+.checkbox svg{width:15px;height:15px;stroke:transparent;stroke-width:3;fill:none;transition:.12s}
+.checkbox.on{border-color:transparent}
+.checkbox.on svg{stroke:#0a0a0d}
+.picker-footer{position:fixed;left:0;right:0;bottom:0;z-index:75;max-width:480px;margin:0 auto;padding:12px 18px calc(14px + var(--safe-b));background:linear-gradient(180deg,transparent,var(--bg2) 26%);transform:translateY(120%);transition:transform .25s cubic-bezier(.22,1,.36,1);pointer-events:none}
+.picker-footer.show{transform:translateY(0);pointer-events:auto}
+.picker-footer .btn:disabled{opacity:.4}
+.tpl-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tpl{display:flex;flex-direction:column;gap:3px;align-items:flex-start;text-align:left;padding:15px 15px;border:1px solid var(--line);border-radius:var(--r);background:var(--card);transition:.14s}
+.tpl:active{transform:scale(.98);background:var(--card2)}
+.tpl-n{font-weight:800;font-size:15px;font-family:'Bricolage Grotesque'}
+.tpl-t{font-size:11px;color:var(--ink2);line-height:1.3}
+.tpl-c{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);font-weight:600;margin-top:5px}
 .exlist .item:active{background:var(--card)}
 .exlist .item .pill{font-size:9px;letter-spacing:.1em;text-transform:uppercase;padding:3px 7px;border-radius:6px;font-weight:700;flex:none}
 .exlist .item .nm{flex:1;font-size:15px;font-weight:600}
