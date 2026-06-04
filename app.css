@@ -5,11 +5,12 @@
   --ok:#2dd4ff; --accent:#ff5cc4; --accent2:#7ab8ff;
   --r:18px; --r-sm:12px;
   --safe-b:env(safe-area-inset-bottom,0px);
+  --safe-t:env(safe-area-inset-top,0px);
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%}
 body{
-  background:var(--bg); color:var(--ink);
+  background:var(--bg2); color:var(--ink);
   font-family:'Hanken Grotesk',sans-serif; line-height:1.45;
   overscroll-behavior-y:none; -webkit-font-smoothing:antialiased;
 }
@@ -50,7 +51,7 @@ input{font-family:inherit}
 header{
   position:sticky; top:0; z-index:30;
   background:var(--bg2); border-bottom:1px solid var(--line);
-  padding:14px 18px; display:flex; align-items:center; justify-content:space-between;
+  padding:calc(14px + var(--safe-t)) 18px 14px; display:flex; align-items:center; justify-content:space-between;
 }
 .brand{display:flex; align-items:center; gap:9px}
 .logo{width:30px;height:30px; flex:none; display:block; object-fit:contain}
@@ -60,22 +61,22 @@ header{
 .icon-btn:active{transform:scale(.92)}
 .icon-btn svg{width:20px;height:20px;stroke:var(--ink2);stroke-width:1.9;fill:none}
 
-main{flex:1; padding:18px 18px 120px; animation:fade .35s ease}
+main{flex:1; padding:18px 18px 100px; animation:fade .35s ease}
 @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
 /* ---------- nav ---------- */
 nav{
   position:fixed; bottom:0; left:0; right:0; z-index:40;
   max-width:480px; margin:0 auto;
-  display:flex; padding:8px 22px calc(8px + var(--safe-b));
+  display:flex; padding:5px 22px calc(5px + var(--safe-b));
   background:var(--bg2); border-top:1px solid var(--line);
 }
-.nav-btn{flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; padding:8px 0; color:var(--ink3); transition:.18s}
-.nav-btn svg{width:24px;height:24px;stroke:currentColor;stroke-width:1.9;fill:none;transition:.18s}
-.nav-btn span{font-size:10px; letter-spacing:.14em; text-transform:uppercase; font-weight:600}
+.nav-btn{flex:1; display:flex; flex-direction:column; align-items:center; gap:2px; padding:5px 0; color:var(--ink3); transition:.18s}
+.nav-btn svg{width:21px;height:21px;stroke:currentColor;stroke-width:1.9;fill:none;transition:.18s}
+.nav-btn span{font-size:9px; letter-spacing:.12em; text-transform:uppercase; font-weight:600}
 .nav-btn.active{color:var(--ink)}
 .nav-btn.active svg{stroke-width:2.3}
-.nav-dot{width:5px;height:5px;border-radius:50%;background:transparent;margin-top:1px}
+.nav-dot{width:4px;height:4px;border-radius:50%;background:transparent;margin-top:0}
 .nav-btn.active .nav-dot{background:var(--accent)}
 
 /* ---------- cards / type ---------- */
@@ -203,7 +204,7 @@ nav{
 .add-set:active{color:var(--ink);background:var(--card2)}
 .add-set svg{width:15px;height:15px;stroke:currentColor;stroke-width:2.4;fill:none}
 
-.wk-actions{position:fixed;bottom:calc(70px + var(--safe-b));left:0;right:0;max-width:480px;margin:0 auto;padding:0 18px;display:flex;gap:10px;z-index:35}
+.wk-actions{position:fixed;bottom:calc(60px + var(--safe-b));left:0;right:0;max-width:480px;margin:0 auto;padding:0 18px;display:flex;gap:10px;z-index:35}
 .wk-actions .btn{box-shadow:0 8px 30px rgba(0,0,0,.5)}
 
 /* ---------- sheet / modal ---------- */
@@ -272,7 +273,7 @@ nav{
 
 .toast{position:fixed;bottom:calc(150px + var(--safe-b));left:50%;transform:translateX(-50%) translateY(20px);z-index:90;background:var(--card2);border:1px solid var(--line2);color:var(--ink);padding:11px 18px;border-radius:99px;font-size:13px;font-weight:600;opacity:0;transition:.3s;pointer-events:none;white-space:nowrap}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-.rest{position:fixed;left:0;right:0;bottom:calc(134px + var(--safe-b));z-index:38;max-width:480px;margin:0 auto;padding:0 18px;display:flex;justify-content:center;opacity:0;pointer-events:none;transform:translateY(12px);transition:.25s cubic-bezier(.22,1,.36,1)}
+.rest{position:fixed;left:0;right:0;bottom:calc(120px + var(--safe-b));z-index:38;max-width:480px;margin:0 auto;padding:0 18px;display:flex;justify-content:center;opacity:0;pointer-events:none;transform:translateY(12px);transition:.25s cubic-bezier(.22,1,.36,1)}
 .rest.show{opacity:1;pointer-events:auto;transform:none}
 .rest-inner{position:relative;overflow:hidden;display:flex;align-items:center;gap:9px;background:var(--card2);border:1px solid var(--line2);border-radius:99px;padding:7px 7px 7px 15px;box-shadow:0 12px 34px rgba(0,0,0,.55)}
 .rest-inner>*{position:relative;z-index:1}
