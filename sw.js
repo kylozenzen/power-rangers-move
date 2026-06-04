@@ -1,4 +1,4 @@
-const CACHE = 'moved-v4';
+const CACHE = 'moved-v5';
 const SHELL = [
   './',
   './index.html',
