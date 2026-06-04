@@ -24,6 +24,7 @@ const $=s=>document.querySelector(s);
 const inc=()=>state.unit==="kg"?2.5:5;
 const fmt=n=>Math.round(n).toLocaleString();
 function volume(w){return w.exercises.reduce((t,e)=>t+e.sets.reduce((s,x)=>s+((+x.w||0)*(+x.r||0)),0),0);}
+function loggedVolume(w){return w.exercises.reduce((t,e)=>t+e.sets.reduce((s,x)=>s+(x.done?(+x.w||0)*(+x.r||0):0),0),0);}
 function lifetime(){return state.workouts.reduce((t,w)=>t+volume(w),0);}
 function tierFor(v){let cur=TIERS[0],nx=null;for(let i=0;i<TIERS.length;i++){if(v>=TIERS[i].at){cur=TIERS[i];nx=TIERS[i+1]||null;}}return{cur,nx};}
 function equivalence(v){
@@ -96,7 +97,7 @@ function renderHome(){
     html+=`<div class="sug" style="border-color:rgba(45,212,255,.3);margin:14px 0" onclick="go('workout')">
       <div class="dot" style="background:var(--ok)"></div>
       <div><div class="t" style="color:var(--ok)">Session in progress</div>
-      <p>${state.active.exercises.length} exercise${state.active.exercises.length!==1?"s":""} logged · ${fmt(volume(state.active))} ${state.unit} moved so far. Tap to continue.</p></div>
+      <p>${state.active.exercises.length} exercise${state.active.exercises.length!==1?"s":""} logged · ${fmt(loggedVolume(state.active))} ${state.unit} moved so far. Tap to continue.</p></div>
     </div>`;
   }
 
@@ -324,7 +325,7 @@ function renderWorkout(){
   let html=`<div class="wk-head">
     <div><div class="eyebrow">Active session</div><div class="wk-timer"><span class="live"></span> started ${new Date(a.startedAt).toLocaleTimeString('en',{hour:'numeric',minute:'2-digit'})}</div></div>
   </div>
-  <div class="wk-total"><div class="n mono spectrum-text">${fmt(volume(a))}</div><div class="l">${state.unit} moved this session</div></div>`;
+  <div class="wk-total"><div class="n mono spectrum-text">${fmt(loggedVolume(a))}</div><div class="l">${state.unit} moved this session</div></div>`;
 
   a.exercises.forEach((e,ei)=>{
     const col=CAT_COLOR[e.cat]||"#ff7ad9";
@@ -332,9 +333,10 @@ function renderWorkout(){
     const logged=isLogged(e);
 
     if(e.collapsed){
+      const prefill = (!logged && e.sets[0] && +e.sets[0].w>0) ? `${e.sets[0].w}×${e.sets[0].r}` : null;
       const summary = logged
         ? `<span class="ex-sum mono">${e.sets.length} set${e.sets.length!==1?'s':''} · ${fmt(exVol)} ${state.unit}</span>`
-        : `<span class="ex-sum todo">tap to log</span>`;
+        : `<span class="ex-sum todo">${prefill?`tap to log · last ${prefill}`:'tap to log'}</span>`;
       html+=`<div class="ex collapsed ${logged?'':'pending'}">
         <div class="ex-h" onclick="toggleCollapse(${ei})">
           <button class="ex-check ${logged?'done spectrum-bg':''}" onclick="event.stopPropagation();toggleCollapse(${ei})"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></button>
@@ -422,7 +424,7 @@ function startFromTemplate(id){
   toast(t.name+" loaded");
 }
 function isLogged(e){
-  return e.sets.some(s=> (+s.w>0 && +s.r>0) || (e.cat==='Bodyweight' && +s.r>0 && s.done));
+  return e.sets.some(s=> s.done);
 }
 function cancelWorkout(){if(confirm("Discard this session? Nothing will be saved.")){cancelRest();releaseWake();state.active=null;save();renderWorkout();}}
 function removeEx(i){state.active.exercises.splice(i,1);save();renderWorkout();}
@@ -466,16 +468,17 @@ function cancelRest(){ if(rest.iv)clearInterval(rest.iv); rest.iv=null; rest.end
 
 function finishWorkout(){
   const a=state.active;
-  if(a.exercises.length===0||volume(a)===0){toast("Log at least one set first");return;}
+  // build a cleaned copy: only sets the user actually completed
+  const cleaned={...a, exercises: a.exercises
+    .map(e=>({...e, sets:e.sets.filter(s=>s.done && +s.r>0)}))
+    .filter(e=>e.sets.length)};
+  if(cleaned.exercises.length===0){ toast("Mark a set done to finish"); return; }
   cancelRest();
   releaseWake();
-  // clean empty sets
-  a.exercises.forEach(e=>e.sets=e.sets.filter(s=>(+s.w>0||e.cat==='Bodyweight')&&+s.r>0));
-  a.exercises=a.exercises.filter(e=>e.sets.length);
-  const prs=detectPRs(a);
-  const vol=volume(a);
-  delete a.startedAt;
-  state.workouts.push(a);
+  const prs=detectPRs(cleaned);
+  const vol=volume(cleaned);
+  delete cleaned.startedAt;
+  state.workouts.push(cleaned);
   state.active=null;
   save();
   showSummary(vol,prs);
