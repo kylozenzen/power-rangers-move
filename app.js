@@ -49,7 +49,7 @@ function lastTopSet(name){
 let route="home";
 function go(r){
   route=r;
-  if(r!=="workout")cancelRest();
+  if(r!=="workout"){cancelRest();clearWorkoutTimer();}
   document.querySelectorAll(".nav-btn").forEach(b=>b.classList.remove("active"));
   const nb=$("#nav-"+r); if(nb)nb.classList.add("active");
   const sb=$("#btn-stats"); if(sb)sb.classList.toggle("on",r==="stats");
@@ -57,6 +57,29 @@ function go(r){
   render();
 }
 function render(){ route==="stats"?renderStats():route==="workout"?renderWorkout():renderHome(); }
+
+let workoutTimerIv=null;
+function fmtElapsed(ms){
+  const total=Math.max(0,Math.floor(ms/1000));
+  const h=Math.floor(total/3600);
+  const m=Math.floor((total%3600)/60);
+  const sec=String(total%60).padStart(2,"0");
+  return h>0?`${h}:${String(m).padStart(2,"0")}:${sec}`:`${m}:${sec}`;
+}
+function clearWorkoutTimer(){
+  if(workoutTimerIv)clearInterval(workoutTimerIv);
+  workoutTimerIv=null;
+}
+function startWorkoutTimer(){
+  clearWorkoutTimer();
+  if(!state.active)return;
+  const tick=()=>{
+    const el=$("#wk-elapsed");
+    if(el)el.textContent=fmtElapsed(Date.now()-(state.active.startedAt||Date.now()));
+  };
+  tick();
+  workoutTimerIv=setInterval(tick,1000);
+}
 
 /* ============ HOME ============ */
 function renderHome(){
@@ -323,21 +346,22 @@ function renderWorkout(){
   }
   const a=state.active;
   let html=`<div class="wk-head">
-    <div><div class="eyebrow">Active session</div><div class="wk-timer"><span class="live"></span> started ${new Date(a.startedAt).toLocaleTimeString('en',{hour:'numeric',minute:'2-digit'})}</div></div>
+    <div><div class="eyebrow">Active session</div><div class="wk-timer"><span class="live"></span><span id="wk-elapsed">${fmtElapsed(Date.now()-(a.startedAt||Date.now()))}</span></div></div>
   </div>
   <div class="wk-total"><div class="n mono spectrum-text">${fmt(loggedVolume(a))}</div><div class="l">${state.unit} moved this session</div></div>`;
 
+  const expandedIndex=a.exercises.findIndex(e=>!e.collapsed);
   a.exercises.forEach((e,ei)=>{
     const col=CAT_COLOR[e.cat]||"#ff7ad9";
     const exVol=e.sets.reduce((t,s)=>t+(+s.w||0)*(+s.r||0),0);
     const logged=isLogged(e);
 
-    if(e.collapsed){
+    if(e.collapsed || (expandedIndex!==-1 && ei!==expandedIndex)){
       const prefill = (!logged && e.sets[0] && +e.sets[0].w>0) ? `${e.sets[0].w}×${e.sets[0].r}` : null;
       const summary = logged
         ? `<span class="ex-sum mono">${e.sets.length} set${e.sets.length!==1?'s':''} · ${fmt(exVol)} ${state.unit}</span>`
         : `<span class="ex-sum todo">${prefill?`tap to log · last ${prefill}`:'tap to log'}</span>`;
-      html+=`<div class="ex collapsed ${logged?'':'pending'}">
+      html+=`<div class="ex collapsed ${logged?'':'pending'} ${expandedIndex!==-1 && ei!==expandedIndex?'focus-hidden':''}">
         <div class="ex-h" onclick="toggleCollapse(${ei})">
           <button class="ex-check ${logged?'done spectrum-bg':''}" onclick="event.stopPropagation();toggleCollapse(${ei})"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></button>
           <span class="pill" style="background:${col}22;color:${col}">${e.cat}</span>
@@ -367,16 +391,16 @@ function renderWorkout(){
         <div class="si">${si+1}</div>
         <div class="numwrap">
           <button onclick="stepSet(${ei},${si},'w',-1)">−</button>
-          <input type="number" inputmode="decimal" value="${s.w}" onchange="setVal(${ei},${si},'w',this.value)">
+          <input type="number" inputmode="decimal" value="${s.w}" onfocus="this.select()" onchange="setVal(${ei},${si},'w',this.value)">
           <button onclick="stepSet(${ei},${si},'w',1)">+</button>
         </div>
         <div class="numwrap">
           <button onclick="stepSet(${ei},${si},'r',-1)">−</button>
-          <input type="number" inputmode="numeric" value="${s.r}" onchange="setVal(${ei},${si},'r',this.value)">
+          <input type="number" inputmode="numeric" value="${s.r}" onfocus="this.select()" onchange="setVal(${ei},${si},'r',this.value)">
           <button onclick="stepSet(${ei},${si},'r',1)">+</button>
         </div>
         <button class="set-x" onclick="removeSet(${ei},${si})">×</button>
-        <button class="set-done ${s.done?'done spectrum-bg':''}" onclick="toggleDone(${ei},${si})"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></button>
+        <button class="set-done ${s.done?'done spectrum-bg':''}" onclick="toggleDone(${ei},${si})">${s.done?'<span class="done-label">DONE</span>':''}<svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></button>
       </div>`;
     });
     html+=`<button class="add-set" onclick="addSet(${ei})"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Add set</button>
@@ -395,6 +419,7 @@ function renderWorkout(){
   </div>`;
 
   $("#view").innerHTML=html;
+  startWorkoutTimer();
 }
 
 function blankSession(){return{id:Date.now(),date:new Date().toISOString(),startedAt:Date.now(),exercises:[]};}
@@ -426,7 +451,7 @@ function startFromTemplate(id){
 function isLogged(e){
   return e.sets.some(s=> s.done);
 }
-function cancelWorkout(){if(confirm("Discard this session? Nothing will be saved.")){cancelRest();releaseWake();state.active=null;save();renderWorkout();}}
+function cancelWorkout(){if(confirm("Discard this session? Nothing will be saved.")){cancelRest();clearWorkoutTimer();releaseWake();state.active=null;save();renderWorkout();}}
 function removeEx(i){state.active.exercises.splice(i,1);save();renderWorkout();}
 function addSet(ei){const sets=state.active.exercises[ei].sets;const last=sets[sets.length-1];sets.push(last?{w:last.w,r:last.r,done:false}:{w:0,r:8,done:false});save();renderWorkout();}
 function removeSet(ei,si){state.active.exercises[ei].sets.splice(si,1);save();renderWorkout();}
@@ -442,7 +467,7 @@ function toggleDone(ei,si){
   }
   save(); renderWorkout();
 }
-function toggleCollapse(ei){const e=state.active.exercises[ei];e.collapsed=!e.collapsed;if(e.collapsed)haptic();save();renderWorkout();}
+function toggleCollapse(ei){const e=state.active.exercises[ei];const opening=e.collapsed;e.collapsed=!e.collapsed;if(opening)state.active.exercises.forEach((x,i)=>{if(i!==ei)x.collapsed=true;});if(e.collapsed)haptic();save();renderWorkout();}
 function haptic(){try{navigator.vibrate&&navigator.vibrate(10);}catch(e){}}
 
 /* ---- rest timer ---- */
@@ -474,6 +499,7 @@ function finishWorkout(){
     .filter(e=>e.sets.length)};
   if(cleaned.exercises.length===0){ toast("Mark a set done to finish"); return; }
   cancelRest();
+  clearWorkoutTimer();
   releaseWake();
   const prs=detectPRs(cleaned);
   const vol=volume(cleaned);
