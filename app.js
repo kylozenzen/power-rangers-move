@@ -9,7 +9,7 @@
 let state = {
   name:"", unit:"lb", anim:true,
   restTimer:true, restDur:90, autoCollapse:true, demo:false,
-  workouts:[],      // {id,date,exercises:[{name,cat,tip,sets:[{w,r,done}],collapsed}]}
+  workouts:[],      // {id,date,notes,exercises:[{name,cat,tip,sets:[{w,r,done}],collapsed}]}
   active:null       // same shape as a workout, plus startedAt
 };
 const KEY="moved_v1";
@@ -57,6 +57,26 @@ function go(r){
   render();
 }
 function render(){ route==="stats"?renderStats():route==="workout"?renderWorkout():renderHome(); }
+
+let sessionTimerIv=null;
+function elapsedText(startedAt){
+  const total=Math.max(0,Math.floor((Date.now()-(+startedAt||Date.now()))/1000));
+  const h=Math.floor(total/3600), m=Math.floor((total%3600)/60), sec=String(total%60).padStart(2,"0");
+  return h>0?`${h}:${String(m).padStart(2,"0")}:${sec}`:`${m}:${sec}`;
+}
+function tickSessionTimer(){
+  const el=$("#session-elapsed");
+  if(el&&state.active) el.textContent=elapsedText(state.active.startedAt);
+}
+function startSessionTimer(){
+  if(sessionTimerIv)clearInterval(sessionTimerIv);
+  tickSessionTimer();
+  sessionTimerIv=setInterval(tickSessionTimer,1000);
+}
+function stopSessionTimer(){
+  if(sessionTimerIv)clearInterval(sessionTimerIv);
+  sessionTimerIv=null;
+}
 
 /* ============ HOME ============ */
 function renderHome(){
@@ -319,11 +339,12 @@ function renderWorkout(){
     });
     html+=`</div><div style="height:20px"></div>`;
     $("#view").innerHTML=html;
+    stopSessionTimer();
     return;
   }
   const a=state.active;
   let html=`<div class="wk-head">
-    <div><div class="eyebrow">Active session</div><div class="wk-timer"><span class="live"></span> started ${new Date(a.startedAt).toLocaleTimeString('en',{hour:'numeric',minute:'2-digit'})}</div></div>
+    <div><div class="eyebrow">Active session</div><div class="wk-timer"><span class="live"></span><span id="session-elapsed" class="mono">${elapsedText(a.startedAt)}</span></div></div>
   </div>
   <div class="wk-total"><div class="n mono spectrum-text">${fmt(loggedVolume(a))}</div><div class="l">${state.unit} moved this session</div></div>`;
 
@@ -367,16 +388,16 @@ function renderWorkout(){
         <div class="si">${si+1}</div>
         <div class="numwrap">
           <button onclick="stepSet(${ei},${si},'w',-1)">−</button>
-          <input type="number" inputmode="decimal" value="${s.w}" onchange="setVal(${ei},${si},'w',this.value)">
+          <input type="number" inputmode="decimal" value="${s.w}" onfocus="this.select()" onchange="setVal(${ei},${si},'w',this.value)">
           <button onclick="stepSet(${ei},${si},'w',1)">+</button>
         </div>
         <div class="numwrap">
           <button onclick="stepSet(${ei},${si},'r',-1)">−</button>
-          <input type="number" inputmode="numeric" value="${s.r}" onchange="setVal(${ei},${si},'r',this.value)">
+          <input type="number" inputmode="numeric" value="${s.r}" onfocus="this.select()" onchange="setVal(${ei},${si},'r',this.value)">
           <button onclick="stepSet(${ei},${si},'r',1)">+</button>
         </div>
         <button class="set-x" onclick="removeSet(${ei},${si})">×</button>
-        <button class="set-done ${s.done?'done spectrum-bg':''}" onclick="toggleDone(${ei},${si})"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></button>
+        <button class="set-done ${s.done?'done':''}" onclick="toggleDone(${ei},${si})"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></button>
       </div>`;
     });
     html+=`<button class="add-set" onclick="addSet(${ei})"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Add set</button>
@@ -388,16 +409,18 @@ function renderWorkout(){
     <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Add exercise</button>
     <div style="height:80px"></div>`;
 
-  html+=`<div class="wk-actions">
+  html+=`<div class="session-notes-wrap"><textarea id="session-notes" class="session-notes" placeholder="How'd it feel? (optional)" oninput="updateActiveNotes(this.value)">${esc(a.notes||"")}</textarea></div>
+  <div class="wk-actions">
     <button class="btn btn-ghost" style="flex:0 0 auto;width:auto;padding:17px 20px" onclick="cancelWorkout()">Discard</button>
     <button class="btn btn-primary spectrum-bg" onclick="finishWorkout()">
       <svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg> Finish</button>
   </div>`;
 
   $("#view").innerHTML=html;
+  startSessionTimer();
 }
 
-function blankSession(){return{id:Date.now(),date:new Date().toISOString(),startedAt:Date.now(),exercises:[]};}
+function blankSession(){return{id:Date.now(),date:new Date().toISOString(),startedAt:Date.now(),notes:"",exercises:[]};}
 function startWorkout(){state.active=blankSession();save();requestWake();openPicker();renderWorkout();}
 function addExFromName(name){
   const l=LIB.find(x=>x[0]===name);
@@ -426,7 +449,7 @@ function startFromTemplate(id){
 function isLogged(e){
   return e.sets.some(s=> s.done);
 }
-function cancelWorkout(){if(confirm("Discard this session? Nothing will be saved.")){cancelRest();releaseWake();state.active=null;save();renderWorkout();}}
+function cancelWorkout(){if(confirm("Discard this session? Nothing will be saved.")){cancelRest();stopSessionTimer();releaseWake();state.active=null;save();renderWorkout();}}
 function removeEx(i){state.active.exercises.splice(i,1);save();renderWorkout();}
 function addSet(ei){const sets=state.active.exercises[ei].sets;const last=sets[sets.length-1];sets.push(last?{w:last.w,r:last.r,done:false}:{w:0,r:8,done:false});save();renderWorkout();}
 function removeSet(ei,si){state.active.exercises[ei].sets.splice(si,1);save();renderWorkout();}
@@ -443,6 +466,7 @@ function toggleDone(ei,si){
   save(); renderWorkout();
 }
 function toggleCollapse(ei){const e=state.active.exercises[ei];e.collapsed=!e.collapsed;if(e.collapsed)haptic();save();renderWorkout();}
+function updateActiveNotes(v){if(state.active){state.active.notes=v;save();}}
 function haptic(){try{navigator.vibrate&&navigator.vibrate(10);}catch(e){}}
 
 /* ---- rest timer ---- */
@@ -468,15 +492,19 @@ function cancelRest(){ if(rest.iv)clearInterval(rest.iv); rest.iv=null; rest.end
 
 function finishWorkout(){
   const a=state.active;
+  const notesEl=$("#session-notes");
+  if(notesEl) a.notes=notesEl.value;
   // build a cleaned copy: only sets the user actually completed
   const cleaned={...a, exercises: a.exercises
     .map(e=>({...e, sets:e.sets.filter(s=>s.done && +s.r>0)}))
     .filter(e=>e.sets.length)};
   if(cleaned.exercises.length===0){ toast("Mark a set done to finish"); return; }
   cancelRest();
+  stopSessionTimer();
   releaseWake();
   const prs=detectPRs(cleaned);
   const vol=volume(cleaned);
+  cleaned.notes=(cleaned.notes||"").trim();
   delete cleaned.startedAt;
   state.workouts.push(cleaned);
   state.active=null;
@@ -593,6 +621,7 @@ function openDetail(idx){
     <div class="eyebrow">Session total</div>
     <div class="big mono" style="font-size:40px">${fmt(volume(w))}<span class="unit">${state.unit}</span></div>
   </div>`;
+  if(w.notes){html+=`<div class="detail-notes">${esc(w.notes)}</div>`;}
   w.exercises.forEach(e=>{
     const col=CAT_COLOR[e.cat]||"#ff7ad9";
     html+=`<div class="detail-ex"><div class="nm"><span><span class="pill" style="background:${col}22;color:${col};font-size:9px;padding:2px 7px;border-radius:5px;margin-right:7px">${e.cat}</span>${esc(e.name)}</span><span class="v">${fmt(e.sets.reduce((t,s)=>t+s.w*s.r,0))} ${state.unit}</span></div>
