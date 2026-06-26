@@ -397,7 +397,7 @@ function renderWorkout(){
           <button onclick="stepSet(${ei},${si},'r',1)">+</button>
         </div>
         <button class="set-x" onclick="removeSet(${ei},${si})">×</button>
-        <button class="set-done ${s.done?'done spectrum-bg':''}" onclick="toggleDone(${ei},${si})"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></button>
+        <button class="set-done ${s.done?'done':''}" onclick="toggleDone(${ei},${si})"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></button>
       </div>`;
     });
     html+=`<button class="add-set" onclick="addSet(${ei})"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Add set</button>

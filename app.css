@@ -194,8 +194,8 @@ nav{
 .set-x{width:30px;height:40px;flex:none;color:var(--ink3);font-size:16px}
 .set-done{width:44px;height:44px;flex:none;border-radius:10px;border:1px solid var(--line2);display:grid;place-items:center;transition:.15s;background:var(--bg2)}
 .set-done svg{width:18px;height:18px;stroke:var(--ink3);stroke-width:2.6;fill:none;transition:.15s}
-.set-done.done{border-color:transparent}
-.set-done.done svg{stroke:#0a0a0d}
+.set-done.done{border-color:rgba(45,212,255,.35);background:rgba(45,212,255,.14)}
+.set-done.done svg{stroke:var(--ok)}
 .colhead{display:flex;gap:8px;padding:2px 5px 0;color:var(--ink3);font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-weight:600}
 .colhead .si{width:24px;flex:none}
 .colhead .c{flex:1;text-align:center}
