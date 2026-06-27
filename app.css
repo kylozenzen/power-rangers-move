@@ -22,8 +22,8 @@ input{font-family:inherit}
 /* ---------- the spectrum: pink → purple → blue, flowing ---------- */
 @keyframes flow{0%{background-position:0% 50%}100%{background-position:300% 50%}}
 .spectrum-bg{
-  background:linear-gradient(115deg,#ff2d9e,#c14bff,#5b8cff,#2dd4ff,#c14bff,#ff2d9e);
-  background-size:300% 100%; animation:flow 9s linear infinite;
+  background:linear-gradient(115deg,#ff2d9e,#c14bff,#5b8cff,#2dd4ff,#c14bff,#ff2d9e) !important;
+  background-size:300% 100% !important; animation:flow 9s linear infinite !important;
 }
 .spectrum-text{
   background:linear-gradient(100deg,#ff5cc4,#c14bff,#5b8cff,#2dd4ff,#c14bff,#ff5cc4);
@@ -163,7 +163,7 @@ nav{
 .ex-h .pill{font-size:9px;letter-spacing:.12em;text-transform:uppercase;padding:3px 8px;border-radius:6px;font-weight:700;flex:none}
 .ex-h .nm{font-weight:700;font-size:15px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ex-h .x{color:var(--ink3);font-size:20px;padding:0 4px;flex:none}
-.ex-check{width:30px;height:30px;flex:none;border-radius:50%;border:1.5px solid var(--line2);display:grid;place-items:center;background:var(--bg2);transition:.15s}
+.ex-check{width:36px;height:36px;flex:none;border-radius:50%;border:1.5px solid var(--line2);display:grid;place-items:center;background:var(--bg2);transition:.15s}
 .ex-check:active{transform:scale(.9)}
 .ex-check svg{width:15px;height:15px;stroke:var(--ink3);stroke-width:2.8;fill:none;transition:.15s}
 .ex-check.done{border-color:transparent}
@@ -175,6 +175,7 @@ nav{
 .ex.collapsed.pending{opacity:1}
 .ex.collapsed.pending .nm{color:var(--ink)}
 .ex.collapsed .nm{font-weight:600;color:var(--ink2)}
+.ex.focus-hidden{display:none}
 .ex-done{width:100%;padding:12px;color:var(--ink2);font-size:13px;font-weight:700;border-top:1px solid var(--line);display:flex;align-items:center;justify-content:center;gap:7px}
 .ex-done:active{color:var(--ink);background:var(--card2)}
 .ex-done svg{width:15px;height:15px;stroke:currentColor;stroke-width:2.6;fill:none}
@@ -187,19 +188,20 @@ nav{
 .set-row{display:flex;align-items:center;gap:8px;padding:7px 5px}
 .set-row .si{width:24px;flex:none;text-align:center;font-size:12px;color:var(--ink3);font-weight:700;font-family:'JetBrains Mono'}
 .numwrap{flex:1;display:flex;align-items:center;background:var(--bg2);border:1px solid var(--line);border-radius:10px;overflow:hidden}
-.numwrap button{width:34px;height:40px;font-size:18px;color:var(--ink2);font-weight:600;flex:none}
+.numwrap button{width:44px;height:48px;font-size:20px;color:var(--ink2);font-weight:600;flex:none}
 .numwrap button:active{color:var(--ink);background:var(--card2)}
 .numwrap input{width:100%;background:none;border:none;text-align:center;color:var(--ink);font-size:16px;font-weight:700;font-family:'JetBrains Mono';outline:none;padding:0;min-width:0}
 .numwrap .suffix{font-size:10px;color:var(--ink3);padding-right:9px;letter-spacing:.08em}
 .set-x{width:30px;height:40px;flex:none;color:var(--ink3);font-size:16px}
-.set-done{width:40px;height:40px;flex:none;border-radius:10px;border:1px solid var(--line2);display:grid;place-items:center;transition:.15s;background:var(--bg2)}
+.set-done{width:44px;height:44px;flex:none;border-radius:10px;border:1px solid var(--line2);display:grid;place-items:center;transition:.15s;background:var(--bg2)}
 .set-done svg{width:18px;height:18px;stroke:var(--ink3);stroke-width:2.6;fill:none;transition:.15s}
-.set-done.done{border-color:transparent}
+.set-done.done{border-color:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
+.set-done.done .done-label{font-size:7px;letter-spacing:.12em;font-weight:800;color:#0a0a0d;line-height:1;display:block;text-align:center}
 .set-done.done svg{stroke:#0a0a0d}
 .colhead{display:flex;gap:8px;padding:2px 5px 0;color:var(--ink3);font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-weight:600}
 .colhead .si{width:24px;flex:none}
 .colhead .c{flex:1;text-align:center}
-.colhead .e{width:30px;flex:none}.colhead .e2{width:40px;flex:none}
+.colhead .e{width:30px;flex:none}.colhead .e2{width:44px;flex:none}
 .add-set{width:100%;padding:11px;color:var(--ink2);font-size:13px;font-weight:600;border-top:1px solid var(--line);display:flex;align-items:center;justify-content:center;gap:7px}
 .add-set:active{color:var(--ink);background:var(--card2)}
 .add-set svg{width:15px;height:15px;stroke:currentColor;stroke-width:2.4;fill:none}
