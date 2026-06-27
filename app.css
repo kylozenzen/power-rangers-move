@@ -22,8 +22,8 @@ input{font-family:inherit}
 /* ---------- the spectrum: pink → purple → blue, flowing ---------- */
 @keyframes flow{0%{background-position:0% 50%}100%{background-position:300% 50%}}
 .spectrum-bg{
-  background:linear-gradient(115deg,#ff2d9e,#c14bff,#5b8cff,#2dd4ff,#c14bff,#ff2d9e);
-  background-size:300% 100%; animation:flow 9s linear infinite;
+  background:linear-gradient(115deg,#ff2d9e,#c14bff,#5b8cff,#2dd4ff,#c14bff,#ff2d9e) !important;
+  background-size:300% 100% !important; animation:flow 9s linear infinite !important;
 }
 .spectrum-text{
   background:linear-gradient(100deg,#ff5cc4,#c14bff,#5b8cff,#2dd4ff,#c14bff,#ff5cc4);
