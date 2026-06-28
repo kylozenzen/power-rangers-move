@@ -167,6 +167,11 @@ function renderHome(){
       <div class="card" style="padding:14px 16px">${sparkline(last)}</div>`;
   }
 
+  // frequency heatmap
+  if(state.workouts.length>=3){
+    html+=`<div class="section-h"><h2>Frequency</h2><span class="link">12 weeks</span></div>${frequencyHeatmap()}`;
+  }
+
   // recent
   html+=`<div class="section-h"><h2>Recent sessions</h2></div>`;
   recent.slice(0,12).forEach((w,i)=>{
@@ -175,7 +180,7 @@ function renderHome(){
     const idx=state.workouts.indexOf(w);
     html+=`<div class="sess" onclick="openDetail(${idx})">
       <div class="date"><div class="d mono">${d.getDate()}</div><div class="m">${d.toLocaleString('en',{month:'short'})}</div></div>
-      <div class="info"><div class="ti">${w.exercises.length} exercise${w.exercises.length!==1?"s":""}</div><div class="me">${esc(names)||"—"}</div></div>
+      <div class="info"><div class="ti">${w.exercises.length} exercise${w.exercises.length!==1?"s":""}${w.duration?` · ${fmtDur(w.duration)}`:""}</div><div class="me">${esc(names)||"—"}</div></div>
       <div class="vol"><div class="n">${fmt(volume(w))}</div><div class="u">${state.unit}</div></div>
     </div>`;
   });
@@ -203,6 +208,28 @@ function smartSuggestion(){
   return{tag:"Keep it simple",text:"Consistency beats intensity. Same lifts, slightly more each time you see them. That's the whole game."};
 }
 function findEx(name){return LIB.find(l=>l[0]===name);}
+
+function frequencyHeatmap(){
+  const today=new Date(); today.setHours(0,0,0,0);
+  const start=new Date(today);
+  start.setDate(start.getDate()-((start.getDay()+6)%7)-77);
+  const hit=new Set(state.workouts.map(w=>{const d=new Date(w.date);d.setHours(0,0,0,0);return d.toISOString().slice(0,10);}));
+  let labels="", cells="";
+  for(let c=0;c<12;c++){
+    const d=new Date(start); d.setDate(start.getDate()+c*7);
+    const prev=new Date(d); prev.setDate(d.getDate()-7);
+    const month=d.toLocaleString('en',{month:'short'});
+    labels+=`<div>${c===0||d.getMonth()!==prev.getMonth()?month:""}</div>`;
+  }
+  for(let r=0;r<7;r++){
+    for(let c=0;c<12;c++){
+      const d=new Date(start); d.setDate(start.getDate()+c*7+r);
+      const key=d.toISOString().slice(0,10);
+      cells+=`<div class="heat-cell ${hit.has(key)?'on':''}"></div>`;
+    }
+  }
+  return `<div class="card heat-card"><div class="heat-months">${labels}</div><div class="heat-grid">${cells}</div></div>`;
+}
 
 function sparkline(vals){
   const w=320,h=42,max=Math.max(...vals,1),min=Math.min(...vals,0);
@@ -404,6 +431,7 @@ function renderWorkout(){
       </div>`;
     });
     html+=`<button class="add-set" onclick="addSet(${ei})"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Add set</button>
+    <div class="rest-step"><span>Rest</span><button onclick="stepRestDur(${ei},-15)">−15</button><b class="mono">${fmtRest(e.restDur||state.restDur||90)}</b><button onclick="stepRestDur(${ei},15)">+15</button></div>
     <button class="ex-done" onclick="toggleCollapse(${ei})"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg> Done — collapse</button>
     </div></div>`;
   });
@@ -427,7 +455,7 @@ function startWorkout(){state.active=blankSession();save();requestWake();openPic
 function addExFromName(name){
   const l=LIB.find(x=>x[0]===name);
   const cat=l?l[1]:"Custom", tip=l?l[2]:"", muscle=l?l[3]:"Other";
-  const ex={name,cat,tip,muscle,collapsed:true,sets:[{w:0,r:cat==="Bodyweight"?8:0,done:false}]};
+  const ex={name,cat,tip,muscle,restDur:state.restDur||90,collapsed:true,sets:[{w:0,r:cat==="Bodyweight"?8:0,done:false}]};
   const top=lastTopSet(name);
   if(top){ex.sets=[{w:top.w,r:top.r,done:false}];}
   state.active.exercises.push(ex);
@@ -457,12 +485,14 @@ function addSet(ei){const sets=state.active.exercises[ei].sets;const last=sets[s
 function removeSet(ei,si){state.active.exercises[ei].sets.splice(si,1);save();renderWorkout();}
 function setVal(ei,si,k,v){state.active.exercises[ei].sets[si][k]=Math.max(0,parseFloat(v)||0);save();renderWorkout();}
 function stepSet(ei,si,k,dir){const s=state.active.exercises[ei].sets[si];const step=k==='w'?inc():1;s[k]=Math.max(0,(+s[k]||0)+dir*step);save();renderWorkout();}
+function fmtRest(sec){const s=Math.max(0,+sec||0),m=Math.floor(s/60),ss=String(s%60).padStart(2,"0");return `${m}:${ss}`;}
+function stepRestDur(ei,dir){const e=state.active.exercises[ei];e.restDur=Math.max(15,(+e.restDur||state.restDur||90)+dir);save();renderWorkout();}
 function toggleDone(ei,si){
   const ex=state.active.exercises[ei]; const s=ex.sets[si];
   s.done=!s.done;
   if(s.done){
     haptic();
-    startRest();
+    startRest(ex.restDur);
     if(state.autoCollapse!==false && ex.sets.length && ex.sets.every(x=>x.done)) ex.collapsed=true;
   }
   save(); renderWorkout();
@@ -472,9 +502,9 @@ function haptic(){try{navigator.vibrate&&navigator.vibrate(10);}catch(e){}}
 
 /* ---- rest timer ---- */
 let rest={endsAt:0,dur:90,iv:null};
-function startRest(){
+function startRest(dur){
   if(state.restTimer===false) return;
-  rest.dur=state.restDur||90;
+  rest.dur=dur||state.restDur||90;
   rest.endsAt=Date.now()+rest.dur*1000;
   $("#rest").classList.add("show");
   if(rest.iv)clearInterval(rest.iv);
@@ -498,6 +528,7 @@ function finishWorkout(){
     .map(e=>({...e, sets:e.sets.filter(s=>s.done && +s.r>0)}))
     .filter(e=>e.sets.length)};
   if(cleaned.exercises.length===0){ toast("Mark a set done to finish"); return; }
+  cleaned.duration=Math.max(0,Date.now()-(a.startedAt||Date.now()));
   cancelRest();
   clearWorkoutTimer();
   releaseWake();
@@ -604,7 +635,7 @@ function commitPicker(){
 }
 function removePickerFooter(){const f=$("#picker-footer");if(f)f.remove();}
 function addExercise(name,cat,tip,muscle){
-  const ex={name,cat,tip,muscle:muscle||"Other",collapsed:true,sets:[{w:0,r:cat==="Bodyweight"?8:0,done:false}]};
+  const ex={name,cat,tip,muscle:muscle||"Other",restDur:state.restDur||90,collapsed:true,sets:[{w:0,r:cat==="Bodyweight"?8:0,done:false}]};
   const top=lastTopSet(name);
   if(top){ex.sets=[{w:top.w,r:top.r,done:false}];}
   state.active.exercises.push(ex);
@@ -618,6 +649,7 @@ function openDetail(idx){
   let html=`<div class="card hero" style="padding:18px;margin-bottom:16px">
     <div class="eyebrow">Session total</div>
     <div class="big mono" style="font-size:40px">${fmt(volume(w))}<span class="unit">${state.unit}</span></div>
+    ${w.duration?`<div class="equiv">⏱ <span>${fmtDur(w.duration)}</span></div>`:""}
   </div>`;
   w.exercises.forEach(e=>{
     const col=CAT_COLOR[e.cat]||"#ff7ad9";
