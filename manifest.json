@@ -1,7 +1,7 @@
 {
   "name": "MOVED — the anti fitness app",
   "short_name": "MOVED",
-  "description": "Log workouts, watch the weight add up. No streaks, no nags.",
+  "description": "Strength, cardio, and absolutely no guilt trips.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
