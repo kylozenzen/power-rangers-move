@@ -1,69 +1,72 @@
-/* ============================================================
-   MOVED — exercise library
-   Format: [ name, equipment, formTip, muscleGroup ]
-   equipment: Barbell | Dumbbell | Machine | Bodyweight
-   muscle:    Chest | Back | Shoulders | Arms | Legs | Core
-   Edit freely — this file is pure content, no logic.
-   ============================================================ */
+/* MOVED exercise library
+   [name, equipment, form tip, primary muscle]
+*/
 window.LIB = [
-  // --- Barbell ---
-  ["Barbell Bench Press","Barbell","Squeeze shoulder blades together, lower bar to mid-chest, drive feet into floor.","Chest"],
-  ["Back Squat","Barbell","Brace your core, sit back and down, keep knees tracking over toes.","Legs"],
-  ["Deadlift","Barbell","Bar over mid-foot, flat back, push the floor away. Don't yank it.","Back"],
-  ["Overhead Press","Barbell","Squeeze glutes, bar travels straight up past your nose, finish overhead.","Shoulders"],
-  ["Barbell Row","Barbell","Hinge ~45°, pull to lower ribs, control the lowering.","Back"],
-  ["Romanian Deadlift","Barbell","Soft knees, push hips back, feel the hamstring stretch, flat back.","Legs"],
-  ["Front Squat","Barbell","Elbows high, upright torso, drive up through mid-foot.","Legs"],
-  ["Barbell Curl","Barbell","Elbows pinned to sides, no swinging, control the lowering.","Arms"],
-  ["Close-Grip Bench Press","Barbell","Hands ~shoulder width, elbows tucked, press through the triceps.","Arms"],
-  ["Hip Thrust","Barbell","Shoulders on bench, drive hips up, squeeze glutes hard at the top.","Legs"],
+  ["Barbell Bench Press","Barbell","Squeeze shoulder blades together, lower to mid-chest, and drive your feet into the floor.","Chest"],
+  ["Back Squat","Barbell","Brace first, sit between your hips, and keep your knees tracking over your toes.","Legs"],
+  ["Deadlift","Barbell","Bar over mid-foot, back braced, and push the floor away instead of yanking the bar.","Back"],
+  ["Overhead Press","Barbell","Squeeze your glutes, move the bar straight up, and finish stacked overhead.","Shoulders"],
+  ["Barbell Row","Barbell","Hinge, pull toward your lower ribs, and control the return.","Back"],
+  ["Romanian Deadlift","Barbell","Keep soft knees, push your hips back, and stop when your hamstrings say hello.","Glutes"],
+  ["Front Squat","Barbell","Keep your elbows high and torso tall while you drive through mid-foot.","Legs"],
+  ["Barbell Curl","Barbell","Keep your elbows pinned and your torso out of the group project.","Arms"],
+  ["Close-Grip Bench Press","Barbell","Use a comfortable shoulder-width grip and keep your elbows tucked.","Arms"],
+  ["Hip Thrust","Barbell","Drive through your heels and squeeze your glutes without overextending your back.","Glutes"],
+  ["Barbell Glute Bridge","Barbell","Ribs down, heels planted, and pause at the top instead of launching your spine.","Glutes"],
 
-  // --- Dumbbell ---
-  ["Dumbbell Bench Press","Dumbbell","Lower deep for stretch, press up and slightly together at the top.","Chest"],
-  ["Dumbbell Shoulder Press","Dumbbell","Press up without flaring elbows too wide, control the descent.","Shoulders"],
-  ["Dumbbell Curl","Dumbbell","Keep elbows pinned, no swinging, squeeze at the top.","Arms"],
-  ["Dumbbell Row","Dumbbell","Flat back, pull elbow past your ribs, slow on the way down.","Back"],
-  ["Lateral Raise","Dumbbell","Lead with elbows, raise to shoulder height, light weight wins here.","Shoulders"],
-  ["Dumbbell Lunge","Dumbbell","Step into a tall lunge, back knee toward floor, drive through front heel.","Legs"],
-  ["Incline Dumbbell Press","Dumbbell","30-45° bench, lower under control, press without locking hard.","Chest"],
-  ["Hammer Curl","Dumbbell","Neutral grip, elbows fixed, controlled tempo both directions.","Arms"],
-  ["Goblet Squat","Dumbbell","Hold one bell at your chest, sit straight down, elbows inside knees.","Legs"],
-  ["Dumbbell Fly","Dumbbell","Slight elbow bend, wide arc, stretch the chest, squeeze back together.","Chest"],
-  ["Rear Delt Fly","Dumbbell","Hinge forward, raise out to the sides, lead with the elbows.","Shoulders"],
-  ["Overhead Tricep Extension","Dumbbell","Elbows by your ears, lower behind the head, extend fully.","Arms"],
+  ["Dumbbell Bench Press","Dumbbell","Lower with control, find a comfortable stretch, and press slightly inward.","Chest"],
+  ["Dumbbell Shoulder Press","Dumbbell","Keep your ribs down and press without flaring your elbows too wide.","Shoulders"],
+  ["Dumbbell Curl","Dumbbell","Keep your elbows quiet and make the biceps do the paperwork.","Arms"],
+  ["Dumbbell Row","Dumbbell","Keep a flat back, pull your elbow past your ribs, and lower slowly.","Back"],
+  ["Lateral Raise","Dumbbell","Lead with your elbows and use less weight than your ego requested.","Shoulders"],
+  ["Dumbbell Lunge","Dumbbell","Stay tall, lower under control, and drive through the whole front foot.","Legs"],
+  ["Incline Dumbbell Press","Dumbbell","Use a modest incline, lower smoothly, and avoid shrugging.","Chest"],
+  ["Hammer Curl","Dumbbell","Use a neutral grip, keep your elbows fixed, and control both directions.","Arms"],
+  ["Goblet Squat","Dumbbell","Hold the bell close, sit straight down, and keep your chest proud.","Legs"],
+  ["Dumbbell Fly","Dumbbell","Keep a soft elbow bend and use a wide, controlled arc.","Chest"],
+  ["Rear Delt Fly","Dumbbell","Hinge forward and raise out, not back, with light controlled reps.","Shoulders"],
+  ["Overhead Tricep Extension","Dumbbell","Keep your elbows near your ears and move only at the elbow.","Arms"],
+  ["Dumbbell Step-Up","Dumbbell","Plant your whole foot on the box and let the working leg do the lifting.","Glutes"],
+  ["Dumbbell Sumo Squat","Dumbbell","Take a wider stance, keep knees tracking out, and sit between your hips.","Glutes"],
 
-  // --- Machine ---
-  ["Leg Press","Machine","Feet shoulder-width, don't lock knees at top, control the negative.","Legs"],
-  ["Lat Pulldown","Machine","Pull bar to upper chest, drive elbows down, don't lean back too far.","Back"],
-  ["Seated Cable Row","Machine","Chest up, pull to your stomach, squeeze, slow return.","Back"],
-  ["Leg Curl","Machine","Full range, squeeze hamstrings at the top, no jerking.","Legs"],
-  ["Leg Extension","Machine","Pause at the top, control down, don't slam the stack.","Legs"],
-  ["Chest Press Machine","Machine","Set seat so handles align mid-chest, press without shrugging.","Chest"],
-  ["Pec Deck","Machine","Slight elbow bend, squeeze chest, smooth arc both ways.","Chest"],
-  ["Cable Tricep Pushdown","Machine","Elbows glued to sides, full extension, control back up.","Arms"],
-  ["Cable Bicep Curl","Machine","Elbows steady, curl with the cable's constant tension, squeeze.","Arms"],
-  ["Seated Calf Raise","Machine","Full stretch at the bottom, rise high onto the toes, pause.","Legs"],
-  ["Cable Lateral Raise","Machine","Constant tension, lead with the elbow to shoulder height.","Shoulders"],
-  ["Face Pull","Machine","Pull rope to your face, elbows high, squeeze the rear delts.","Shoulders"],
-  ["Cable Crunch","Machine","Kneel, round the spine down, crunch with the abs not the hips.","Core"],
+  ["Leg Press","Machine","Use a comfortable stance, control the depth, and do not lock your knees hard.","Legs"],
+  ["Lat Pulldown","Machine","Drive your elbows down and avoid turning it into a reclining chair exercise.","Back"],
+  ["Seated Cable Row","Machine","Keep your chest tall, pull to your torso, and return with control.","Back"],
+  ["Leg Curl","Machine","Use the full range and squeeze without bouncing the stack.","Legs"],
+  ["Leg Extension","Machine","Pause briefly at the top and lower instead of dropping the weight.","Legs"],
+  ["Chest Press Machine","Machine","Set the seat around mid-chest and press without shrugging.","Chest"],
+  ["Pec Deck","Machine","Keep a slight elbow bend and squeeze through a smooth arc.","Chest"],
+  ["Cable Tricep Pushdown","Machine","Glue your elbows to your sides and finish the extension.","Arms"],
+  ["Cable Bicep Curl","Machine","Keep your elbows steady and let the cable maintain the tension.","Arms"],
+  ["Seated Calf Raise","Machine","Use a full stretch, rise high, and pause instead of bouncing.","Legs"],
+  ["Cable Lateral Raise","Machine","Lead with the elbow and keep the motion smooth.","Shoulders"],
+  ["Face Pull","Machine","Pull toward your face with high elbows and squeeze your upper back.","Shoulders"],
+  ["Cable Crunch","Machine","Round your spine with your abs instead of folding at the hips.","Core"],
+  ["Cable Kickback","Machine","Keep your torso still and drive the leg back with your glute.","Glutes"],
+  ["Hip Abduction Machine","Machine","Sit tall, control the return, and do not bounce out of the bottom.","Glutes"],
 
-  // --- Bodyweight ---
-  ["Pull-up","Bodyweight","Dead hang start, pull chest to bar, control the lowering.","Back"],
-  ["Push-up","Bodyweight","Body in a straight line, elbows ~45°, full range each rep.","Chest"],
-  ["Dip","Bodyweight","Lean slightly forward, lower until shoulders ~parallel, press up.","Chest"],
-  ["Plank","Bodyweight","Straight line head to heels, brace, breathe. Log seconds in reps.","Core"],
-  ["Bodyweight Squat","Bodyweight","Sit back and down, chest up, full depth, control the rise.","Legs"],
-  ["Chin-up","Bodyweight","Underhand grip, pull till chin clears bar, slow negative.","Back"],
-  ["Hanging Leg Raise","Bodyweight","Dead hang, raise legs with control, no swinging.","Core"],
-  ["Bulgarian Split Squat","Bodyweight","Rear foot elevated, drop straight down, drive through the front heel.","Legs"],
-  ["Pike Push-up","Bodyweight","Hips high, head between hands, press like a vertical push.","Shoulders"],
-  ["Russian Twist","Bodyweight","Lean back, rotate side to side, keep the core braced.","Core"]
+  ["Pull-up","Bodyweight","Start from a controlled hang, pull your chest upward, and own the lowering.","Back"],
+  ["Push-up","Bodyweight","Keep one straight line, use a full range, and keep elbows around 45 degrees.","Chest"],
+  ["Dip","Bodyweight","Lower with control and stop before your shoulders feel sketchy.","Chest"],
+  ["Plank","Bodyweight","Brace, breathe, and log seconds in the reps field.","Core"],
+  ["Bodyweight Squat","Bodyweight","Sit down between your hips and keep your whole foot connected to the floor.","Legs"],
+  ["Chin-up","Bodyweight","Use an underhand grip, clear the bar, and lower slowly.","Back"],
+  ["Hanging Leg Raise","Bodyweight","Control the swing and lift with your core instead of momentum.","Core"],
+  ["Bulgarian Split Squat","Bodyweight","Drop straight down and drive through the front leg.","Glutes"],
+  ["Pike Push-up","Bodyweight","Keep your hips high and press your head between your hands.","Shoulders"],
+  ["Russian Twist","Bodyweight","Rotate through your torso while keeping your core braced.","Core"],
+  ["Bodyweight Glute Bridge","Bodyweight","Press through your heels and pause with your glutes squeezed.","Glutes"],
+  ["Walking Lunge","Bodyweight","Stay tall and take controlled steps instead of rushing the hallway.","Glutes"],
+  ["Dead Bug","Bodyweight","Keep your lower back connected to the floor and move opposite limbs slowly.","Core"]
 ];
 
-/* Equipment categories + their accent colors (used by picker + analytics) */
 window.CATS = ["All","Barbell","Dumbbell","Machine","Bodyweight"];
-window.CAT_COLOR = {Barbell:"#ff3da6",Dumbbell:"#2dd4ff",Machine:"#a855f7",Bodyweight:"#5b8cff",Custom:"#ff7ad9"};
-
-/* Muscle groups + their colors (used by the muscle filter + muscle analytics) */
-window.MUSCLES = ["Chest","Back","Shoulders","Arms","Legs","Core"];
-window.MUSCLE_COLOR = {Chest:"#ff3da6",Back:"#5b8cff",Shoulders:"#2dd4ff",Arms:"#ff7ad9",Legs:"#a855f7",Core:"#c14bff",Other:"#6f6b82"};
+window.CAT_COLOR = {
+  Barbell:"#ff4ea9", Dumbbell:"#2dd4ff", Machine:"#b06cff",
+  Bodyweight:"#6d8dff", Custom:"#ff83d1"
+};
+window.MUSCLES = ["Chest","Back","Shoulders","Arms","Legs","Glutes","Core"];
+window.MUSCLE_COLOR = {
+  Chest:"#ff4ea9", Back:"#6d8dff", Shoulders:"#2dd4ff", Arms:"#ff83d1",
+  Legs:"#ad70ff", Glutes:"#ff6f91", Core:"#c65cff", Other:"#77728b"
+};
