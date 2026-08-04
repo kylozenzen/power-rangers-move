@@ -1,24 +1,56 @@
-/* MOVED 2.1 — set shortcuts, undo, deletion, and plate math */
+/* MOVED 2.1 — set shortcuts, logging flow, undo, deletion, and plate math */
 (function(){
   "use strict";
   const FAC=window.MovedActiveControls;
+
+  FAC.removeFollowingPlaceholder=function(e,si){
+    const current=e?.sets?.[si],next=e?.sets?.[si+1];
+    if(!current||!next||next.done)return;
+    const untouched=(+next.w||0)===(+current.w||0)&&(+next.r||0)===(+current.r||0)&&!next.warmup;
+    if(untouched)e.sets.splice(si+1,1);
+  };
 
   FAC.openSetMenu=function(ei,si){
     const e=state.active?.exercises?.[ei],s=e?.sets?.[si];if(!e||!s)return;
     const previousLabel=si>0?"Copy previous set":"Copy last workout";
     $("#sheet-title").textContent=`Set ${si+1} · ${e.name}`;
     $("#sheet-body").innerHTML=`
-      <div class="fac-set-summary"><b>${s.w||0}${e.cat==='Bodyweight'?' added':' '+state.unit} × ${s.r||0}</b><span>${s.done?'Completed':'Not completed'}${s.warmup?' · warm-up':''}</span></div>
+      <div class="fac-set-summary"><b>${s.w||0}${e.cat==='Bodyweight'?' added':' '+state.unit} × ${s.r||0}</b><span>${s.done?'Logged':'Ready to add'}${s.warmup?' · warm-up':''}</span></div>
       <div class="fac-action-list">
-        <button onclick="facCopyPreviousSet(${ei},${si})"><span>↶</span><b>${previousLabel}</b><small>Reuse weight and reps</small></button>
+        ${!s.done?`<button onclick="facCopyPreviousSet(${ei},${si})"><span>↶</span><b>${previousLabel}</b><small>Reuse weight and reps</small></button>`:""}
         <button onclick="facDuplicateSet(${ei},${si})"><span>⧉</span><b>Duplicate set</b><small>Add a matching set below</small></button>
-        <button onclick="facApplyWeight(${ei},${si})"><span>↓</span><b>Apply weight to remaining sets</b><small>Completed sets stay untouched</small></button>
+        ${!s.done?`<button onclick="facApplyWeight(${ei},${si})"><span>↓</span><b>Apply weight to remaining sets</b><small>Logged sets stay untouched</small></button>`:""}
         ${FAC.isBarbell(e)?`<button onclick="facOpenPlateCalculator(${ei},${si})"><span>◉</span><b>Plate calculator</b><small>What goes on each side</small></button>`:""}
-        <button onclick="facToggleSetDoneFromMenu(${ei},${si})"><span>${s.done?'↩':'✓'}</span><b>${s.done?'Undo “Done”':'Mark set done'}</b><small>${s.done?'Return it to the workout':'Log it without leaving the menu'}</small></button>
+        ${s.done?`<button onclick="facUndoSet(${ei},${si})"><span>↩</span><b>Undo logged set</b><small>Return it to the editable row</small></button>`:""}
         <button class="danger" onclick="facDeleteSet(${ei},${si})"><span>×</span><b>Delete set</b><small>Remove this row</small></button>
       </div>`;
     openSheet();
   };
+
+  FAC.logAndAddSet=function(ei){
+    const e=state.active?.exercises?.[ei];if(!e)return;
+    let si=e.sets.findIndex(s=>!s.done);
+    if(si<0){
+      const last=e.sets[e.sets.length-1]||{w:0,r:8};
+      e.sets.push({w:+last.w||0,r:+last.r||8,done:false,warmup:false});
+      si=e.sets.length-1;
+    }
+    const s=e.sets[si];
+    if((+s.r||0)<=0)return toast("Add reps before logging this set");
+    s.done=true;haptic();startRest();
+    let nextIndex=e.sets.findIndex((x,i)=>i>si&&!x.done);
+    if(nextIndex<0){
+      e.sets.splice(si+1,0,{w:+s.w||0,r:+s.r||0,done:false,warmup:false});
+      nextIndex=si+1;
+    }
+    save();renderWorkout();
+    setTimeout(()=>{
+      const row=$(`.fac-set-row[data-ei="${ei}"][data-si="${nextIndex}"]`);
+      row?.scrollIntoView({block:"center",behavior:state.anim===false?"auto":"smooth"});
+    },0);
+    toast(`Set ${si+1} logged · next one ready`);
+  };
+
   FAC.copyPreviousSet=function(ei,si){
     const e=state.active.exercises[ei],s=e.sets[si];let source=null;
     if(si>0)source=e.sets[si-1];
@@ -27,38 +59,55 @@
     s.w=+source.w||0;s.r=+source.r||0;s.warmup=!!source.warmup;s.done=false;
     closeSheet();FAC.saveAndRender("Previous set copied");
   };
+
   FAC.duplicateSet=function(ei,si){
-    const sets=state.active.exercises[ei].sets,s=sets[si];sets.splice(si+1,0,{w:+s.w||0,r:+s.r||0,done:false,warmup:!!s.warmup});
-    closeSheet();FAC.saveAndRender("Set duplicated");
+    const sets=state.active.exercises[ei].sets,s=sets[si];
+    sets.splice(si+1,0,{w:+s.w||0,r:+s.r||0,done:false,warmup:!!s.warmup});
+    closeSheet();FAC.saveAndRender("Matching set added");
   };
+
   FAC.applyWeight=function(ei,si){
     const sets=state.active.exercises[ei].sets,weight=+sets[si].w||0;let changed=0;
     sets.forEach((s,i)=>{if(i>si&&!s.done){s.w=weight;changed++;}});
     closeSheet();if(!changed)return toast("No unfinished sets below this one");FAC.saveAndRender(`Weight applied to ${changed} set${changed===1?'':'s'}`);
   };
-  FAC.toggleSetDoneFromMenu=function(ei,si){closeSheet();toggleDone(ei,si);};
+
+  FAC.undoSet=function(ei,si){
+    const e=state.active?.exercises?.[ei],s=e?.sets?.[si];if(!e||!s||!s.done)return;
+    FAC.removeFollowingPlaceholder(e,si);s.done=false;e.collapsed=false;
+    state.active.exercises.forEach((x,i)=>{if(i!==ei)x.collapsed=true;});
+    cancelRest();closeSheet();FAC.saveAndRender("Set restored");
+  };
+
   FAC.deleteSet=function(ei,si){
     const e=state.active.exercises[ei];if(e.sets.length<=1)return toast("Keep one set, even if it is aspirational");
     if(!confirm(`Delete set ${si+1} from ${e.name}?`))return;
     e.sets.splice(si,1);closeSheet();FAC.saveAndRender("Set deleted");
   };
+
   FAC.undoLastDone=function(){
     if(!state.active)return;
     for(let ei=state.active.exercises.length-1;ei>=0;ei--){
       const e=state.active.exercises[ei];
       for(let si=e.sets.length-1;si>=0;si--){
         if(e.sets[si].done){
-          e.sets[si].done=false;e.collapsed=false;
+          FAC.removeFollowingPlaceholder(e,si);e.sets[si].done=false;e.collapsed=false;
           state.active.exercises.forEach((x,i)=>{if(i!==ei)x.collapsed=true;});
-          cancelRest();FAC.saveAndRender("Last completed set restored");return;
+          cancelRest();FAC.saveAndRender("Last logged set restored");return;
         }
       }
     }
-    toast("No completed set to undo");
+    toast("No logged set to undo");
   };
+
   FAC.undoExercise=function(ei){
     const e=state.active?.exercises?.[ei];if(!e)return;
-    for(let si=e.sets.length-1;si>=0;si--){if(e.sets[si].done){e.sets[si].done=false;e.collapsed=false;cancelRest();FAC.saveAndRender("Set restored");return;}}
+    for(let si=e.sets.length-1;si>=0;si--){
+      if(e.sets[si].done){
+        FAC.removeFollowingPlaceholder(e,si);e.sets[si].done=false;e.collapsed=false;
+        cancelRest();FAC.saveAndRender("Set restored");return;
+      }
+    }
   };
 
   FAC.calculatePlates=function(target,bar,unit){
@@ -67,12 +116,15 @@
     options.forEach(p=>{const count=Math.floor((remaining+1e-7)/p);if(count){plates.push([p,count]);remaining-=p*count;}});
     const loaded=plates.reduce((t,[p,c])=>t+p*c,0);return{plates,actual:bar+loaded*2,remainder:Math.max(0,remaining)};
   };
+
   FAC.openPlateCalculator=function(ei,si){
     const e=state.active?.exercises?.[ei],s=e?.sets?.[si];if(!e||!s)return;
     FAC.plateContext={ei,si,target:+s.w||lastTopSet(e.name,state.active.editingIndex)?.w||(state.unit==="kg"?60:135),bar:state.unit==="kg"?20:45};
     $("#sheet-title").textContent=`Plate math · ${e.name}`;FAC.renderPlateCalculator();openSheet();
   };
+
   FAC.setPlateValue=function(key,value){if(!FAC.plateContext)return;FAC.plateContext[key]=Math.max(0,parseFloat(value)||0);FAC.renderPlateCalculator();};
+
   FAC.renderPlateCalculator=function(){
     if(!FAC.plateContext)return;
     const {target,bar}=FAC.plateContext,result=FAC.calculatePlates(target,bar,state.unit);
@@ -88,10 +140,11 @@
   };
 
   window.facOpenSetMenu=FAC.openSetMenu;
+  window.facLogAndAddSet=FAC.logAndAddSet;
   window.facCopyPreviousSet=FAC.copyPreviousSet;
   window.facDuplicateSet=FAC.duplicateSet;
   window.facApplyWeight=FAC.applyWeight;
-  window.facToggleSetDoneFromMenu=FAC.toggleSetDoneFromMenu;
+  window.facUndoSet=FAC.undoSet;
   window.facDeleteSet=FAC.deleteSet;
   window.facUndoLastDone=FAC.undoLastDone;
   window.facUndoExercise=FAC.undoExercise;
