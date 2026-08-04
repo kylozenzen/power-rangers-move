@@ -1,6 +1,6 @@
-const CACHE='moved-v9';
+const CACHE='moved-v10';
 const SHELL=[
-  './','./index.html','./app.css','./active-controls.css','./app.js','./manifest.json',
+  './','./index.html','./app.css','./active-controls.css','./active-controls-set-flow.css','./app.js','./manifest.json',
   './active-controls-core.js','./active-controls-sets.js','./active-controls-exercises.js','./active-controls-render.js',
   './data/exercises.js','./data/tiers.js','./data/workout-templates.js',
   './icons/logo-mark.svg','./icons/logo-mark.png','./icons/icon-32.png','./icons/icon-180.png',
