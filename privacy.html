@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#09080f" />
+  <meta name="description" content="How MOVED handles local workout data, backups, optional analytics, and third-party services." />
+  <meta name="robots" content="index,follow" />
+  <title>Privacy — MOVED</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-32.png" />
+  <link rel="apple-touch-icon" href="/icons/icon-180.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/privacy.css" />
+</head>
+<body>
+  <div class="topline" aria-hidden="true"></div>
+  <nav class="privacy-nav" aria-label="Privacy navigation">
+    <a class="privacy-brand" href="/"><img src="/icons/logo-mark.svg" alt="" /><span>MOVED</span></a>
+    <div><a href="/">Home</a><a class="privacy-open" href="/app">Open MOVED</a></div>
+  </nav>
+
+  <main>
+    <header class="privacy-hero">
+      <div class="privacy-eyebrow">Privacy, without the legal treadmill</div>
+      <h1>Your workouts are personal. <span>The tracker can act like it.</span></h1>
+      <p>MOVED is a local-first workout tracker with no account requirement. This page explains what stays on your device, what leaves only when you choose to export it, and what optional analytics can measure after permission.</p>
+      <div class="privacy-date">Effective August 6, 2026</div>
+    </header>
+
+    <section class="privacy-summary" aria-label="Privacy summary">
+      <article><strong>No account required</strong><span>MOVED does not need your name, email address, password, or profile to track a workout.</span></article>
+      <article><strong>Workout data stays local</strong><span>Exercises, weights, reps, notes, routines, sessions, and recovery snapshots are stored in your browser on your device.</span></article>
+      <article><strong>Analytics is optional</strong><span>Google Analytics is blocked from loading until you choose to allow it.</span></article>
+    </section>
+
+    <article class="policy">
+      <section>
+        <h2>Information stored on your device</h2>
+        <p>MOVED uses browser storage to remember the information needed to make the tracker useful, including:</p>
+        <ul>
+          <li>Completed workout sessions and active workout state.</li>
+          <li>Exercise names, sets, weights, repetitions, warm-up status, notes, and effort selections.</li>
+          <li>Cardio activity, duration, distance, effort, and related workout notes.</li>
+          <li>Saved routines and app preferences such as units, animation, rest-timer settings, and your optional display name.</li>
+          <li>Local recovery snapshots used to make destructive actions such as restore or clear operations recoverable.</li>
+          <li>Your analytics choice, so MOVED can continue respecting it.</li>
+          <li>Cached app files used to support installation and offline operation.</li>
+        </ul>
+        <p>This information stays in browser storage on the device where you use MOVED unless you deliberately create a backup file. Clearing browser/site data, browser storage, or uninstalling an installed web app can remove local history depending on the browser and operating system.</p>
+      </section>
+
+      <section>
+        <h2>Backups and restores</h2>
+        <p>When you choose <strong>Backup MOVED</strong>, the app creates a JSON file containing your local MOVED state so you can keep your own copy. That backup can include workout history, routines, preferences, and an active session.</p>
+        <p>The backup is created in your browser and downloaded to the location chosen by your browser or operating system. MOVED does not upload that backup to a MOVED account or cloud database.</p>
+        <p>When you restore a backup, MOVED reads the file locally, previews its contents, and lets you merge or replace compatible local data. Before destructive restore or clear operations, MOVED creates a local recovery snapshot when browser storage is available.</p>
+      </section>
+
+      <section>
+        <h2>Optional Google Analytics</h2>
+        <p>MOVED uses Google Analytics 4 only after you choose <strong>Allow analytics</strong>. The implementation uses a basic consent approach: until permission is granted, the Google Analytics tag is not loaded and MOVED does not send analytics information to Google.</p>
+        <p>When allowed, analytics may measure page views and product-level events such as landing-page app opens, install-prompt interactions, app opens, installation completion, workout-start or workout-complete events, backup actions, and offline-diagnostic usage.</p>
+        <p><strong>MOVED does not send workout content to Analytics.</strong> That means no exercise names, weights, reps, workout notes, cardio details, routines, workout history, body measurements, optional display name, or other workout values are included in analytics events.</p>
+        <p>Advertising storage, advertising user data, and ad personalization remain denied. You can decline analytics without affecting the tracker and change your choice later through the <strong>Analytics choices</strong> control on the site or inside MOVED settings when analytics is configured.</p>
+      </section>
+
+      <section>
+        <h2>What MOVED does not currently use</h2>
+        <ul>
+          <li>No user accounts or login system.</li>
+          <li>No server-hosted workout-history database.</li>
+          <li>No advertising network or personalized advertising.</li>
+          <li>No payment processing.</li>
+          <li>No sale of personal information.</li>
+          <li>No analytics collection when permission is declined.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Third-party services</h2>
+        <p><strong>Netlify</strong> hosts MOVED, delivers site files, and runs the small serverless function that provides the optional analytics loader. Like most hosting providers, Netlify may process technical request information as part of operating and securing the service. Review <a href="https://www.netlify.com/privacy/" target="_blank" rel="noopener noreferrer">Netlify's privacy policy</a>.</p>
+        <p><strong>Google Analytics</strong> provides optional product usage measurement only after consent. Review <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">Google's privacy policy</a>.</p>
+        <p><strong>Google Fonts</strong> supplies the typefaces used by the landing page and tracker. When fonts are fetched, your browser may connect to Google's servers. Review <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">Google's privacy policy</a>.</p>
+      </section>
+
+      <section>
+        <h2>Your choices</h2>
+        <ul>
+          <li>Use MOVED in a browser without installing it.</li>
+          <li>Install MOVED as a progressive web app for offline use.</li>
+          <li>Allow or decline optional analytics without changing app access.</li>
+          <li>Change your analytics choice later.</li>
+          <li>Create your own backup file and restore it when needed.</li>
+          <li>Clear MOVED data using the in-app tools or your browser's site-data controls.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Beta software</h2>
+        <p>MOVED is currently in beta. The local-first model reduces the amount of workout information leaving your device, but browser storage is not a substitute for a permanent backup. During beta, keeping occasional exported backups is recommended if your history matters to you.</p>
+      </section>
+
+      <section>
+        <h2>Changes to this policy</h2>
+        <p>This page will be updated if MOVED adds accounts, cloud sync, advertising, payments, sharing that uploads workout data, or another feature that materially changes how information is handled. The effective date above will change when the policy changes.</p>
+      </section>
+    </article>
+  </main>
+
+  <footer>
+    <div class="privacy-footer-inner">
+      <span>© 2026 Nobody Creative</span>
+      <a href="/">Back to MOVED</a>
+      <a href="/app">Open app</a>
+    </div>
+  </footer>
+
+  <script src="/.netlify/functions/analytics"></script>
+</body>
+</html>

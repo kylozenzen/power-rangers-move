@@ -3,7 +3,7 @@
   "name": "MOVED — the anti fitness app",
   "short_name": "MOVED",
   "description": "Strength, cardio, and absolutely no guilt trips.",
-  "start_url": "./index.html?source=pwa",
+  "start_url": "/app?source=pwa",
   "scope": "./",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui"],
