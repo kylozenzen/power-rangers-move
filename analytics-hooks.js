@@ -45,9 +45,9 @@
     const original = window[name];
     if (typeof original !== 'function') return;
     window[name] = function movedTrackedWorkoutStart(...args) {
-      const hadActive = !!window.state?.active;
+      const hadActive = !!state.active;
       const result = original.apply(this, args);
-      if (!hadActive && window.state?.active && window.state.active.editingIndex === null) track('workout_started');
+      if (!hadActive && state.active && state.active.editingIndex === null) track('workout_started');
       return result;
     };
   });
@@ -55,10 +55,10 @@
   if (typeof window.finishWorkout === 'function') {
     const originalFinishWorkout = window.finishWorkout;
     window.finishWorkout = function movedTrackedWorkoutFinish(...args) {
-      const beforeCount = Array.isArray(window.state?.workouts) ? window.state.workouts.length : 0;
-      const wasEditing = window.state?.active?.editingIndex !== null;
+      const beforeCount = Array.isArray(state.workouts) ? state.workouts.length : 0;
+      const wasEditing = state.active?.editingIndex !== null;
       const result = originalFinishWorkout.apply(this, args);
-      const afterCount = Array.isArray(window.state?.workouts) ? window.state.workouts.length : 0;
+      const afterCount = Array.isArray(state.workouts) ? state.workouts.length : 0;
       if (!wasEditing && afterCount > beforeCount) track('workout_completed');
       return result;
     };
