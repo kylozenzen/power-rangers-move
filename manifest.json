@@ -1,14 +1,17 @@
 {
+  "id": "./",
   "name": "MOVED — the anti fitness app",
   "short_name": "MOVED",
   "description": "Strength, cardio, and absolutely no guilt trips.",
-  "start_url": "./index.html",
+  "start_url": "./index.html?source=pwa",
   "scope": "./",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "orientation": "portrait",
   "background_color": "#09080f",
   "theme_color": "#09080f",
   "categories": ["health", "fitness", "lifestyle"],
+  "prefer_related_applications": false,
   "icons": [
     { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
