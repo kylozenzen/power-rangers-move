@@ -1,4 +1,4 @@
-const CACHE='moved-v14';
+const CACHE='moved-v15';
 const SHELL=[
   './','./index.html','./app.css','./active-controls.css','./active-controls-set-flow.css','./beta-infra.css','./beta-diagnostics.css','./app.js','./manifest.json',
   './active-controls-core.js','./active-controls-sets.js','./active-controls-exercises.js','./active-controls-render.js','./active-controls-inline-edit.js','./beta-infra.js','./beta-diagnostics.js',
@@ -19,14 +19,27 @@ self.addEventListener('message',event=>{
   if(event.data?.type==='SKIP_WAITING')self.skipWaiting();
 });
 
+async function cachedNavigation(cache,request){
+  return (await cache.match(request))||(await cache.match('./index.html'))||(await cache.match('./'));
+}
+
 async function navigationResponse(request){
   const cache=await caches.open(CACHE);
+
+  // When the browser already knows there is no connection, do not make a
+  // network request first. This keeps installed/offline launches quiet and
+  // avoids needlessly poking the OS connectivity layer in airplane mode.
+  if(self.navigator?.onLine===false){
+    const cached=await cachedNavigation(cache,request);
+    if(cached)return cached;
+  }
+
   try{
     const response=await fetch(request);
     if(response&&response.ok)cache.put('./index.html',response.clone());
     return response;
   }catch(_){
-    return (await cache.match(request))||(await cache.match('./index.html'))||(await cache.match('./'));
+    return cachedNavigation(cache,request);
   }
 }
 
