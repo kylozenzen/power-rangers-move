@@ -1,6 +1,6 @@
-const CACHE='moved-v16';
+const CACHE='moved-v17';
 const SHELL=[
-  './index.html','./landing.html','./privacy.html','./landing.css','./landing.js','./privacy.css','./analytics-hooks.js',
+  './index.html','./landing-v2.html','./privacy.html','./landing.css','./landing-story.css','./landing.js','./privacy.css','./analytics-hooks.js',
   './app.css','./active-controls.css','./active-controls-set-flow.css','./beta-infra.css','./beta-diagnostics.css','./app.js','./manifest.json',
   './active-controls-core.js','./active-controls-sets.js','./active-controls-exercises.js','./active-controls-render.js','./active-controls-inline-edit.js','./beta-infra.js','./beta-diagnostics.js',
   './data/exercises.js','./data/tiers.js','./data/workout-templates.js',
@@ -27,17 +27,15 @@ async function cachedNavigation(cache,request){
   if(exact)return exact;
   if(path==='/app'||path.endsWith('/index.html'))return (await cache.match('./index.html'))||(await cache.match('/index.html'));
   if(path==='/privacy'||path.endsWith('/privacy.html'))return (await cache.match('./privacy.html'))||(await cache.match('/privacy.html'));
-  return (await cache.match('./landing.html'))||(await cache.match('/landing.html'));
+  return (await cache.match('./landing-v2.html'))||(await cache.match('/landing-v2.html'));
 }
 
 async function navigationResponse(request){
   const cache=await caches.open(CACHE);
-
   if(self.navigator?.onLine===false){
     const cached=await cachedNavigation(cache,request);
     if(cached)return cached;
   }
-
   try{
     const response=await fetch(request);
     if(response&&response.ok)cache.put(request,response.clone());
@@ -64,19 +62,19 @@ async function externalResponse(request){
   const cache=await caches.open(CACHE);
   const cached=await cache.match(request);
   if(cached)return cached;
-  const response=await fetch(request);
-  if(response&&response.ok)cache.put(request,response.clone());
-  return response;
+  try{
+    const response=await fetch(request);
+    if(response&&response.ok)cache.put(request,response.clone());
+    return response;
+  }catch(_){
+    return cached||Response.error();
+  }
 }
 
 self.addEventListener('fetch',event=>{
   if(event.request.method!=='GET')return;
   const url=new URL(event.request.url);
-
-  // Analytics is deliberately network-only. The serverless loader itself is
-  // not cached, and the Google tag is loaded only after explicit consent.
   if(url.origin===location.origin&&url.pathname.startsWith('/.netlify/functions/'))return;
-
   if(event.request.mode==='navigate'&&url.origin===location.origin){
     event.respondWith(navigationResponse(event.request));
     return;
@@ -85,5 +83,5 @@ self.addEventListener('fetch',event=>{
     event.respondWith(shellResponse(event.request));
     return;
   }
-  if(url.hostname.includes('fonts.g'))event.respondWith(externalResponse(event.request));
+  if(url.hostname.includes('fonts.g')||url.hostname==='images.pexels.com')event.respondWith(externalResponse(event.request));
 });
