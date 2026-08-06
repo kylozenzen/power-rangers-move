@@ -1,6 +1,7 @@
-const CACHE='moved-v15';
+const CACHE='moved-v16';
 const SHELL=[
-  './','./index.html','./app.css','./active-controls.css','./active-controls-set-flow.css','./beta-infra.css','./beta-diagnostics.css','./app.js','./manifest.json',
+  './index.html','./landing.html','./privacy.html','./landing.css','./landing.js','./privacy.css','./analytics-hooks.js',
+  './app.css','./active-controls.css','./active-controls-set-flow.css','./beta-infra.css','./beta-diagnostics.css','./app.js','./manifest.json',
   './active-controls-core.js','./active-controls-sets.js','./active-controls-exercises.js','./active-controls-render.js','./active-controls-inline-edit.js','./beta-infra.js','./beta-diagnostics.js',
   './data/exercises.js','./data/tiers.js','./data/workout-templates.js',
   './icons/logo-mark.svg','./icons/logo-mark.png','./icons/icon-32.png','./icons/icon-180.png',
@@ -20,15 +21,18 @@ self.addEventListener('message',event=>{
 });
 
 async function cachedNavigation(cache,request){
-  return (await cache.match(request))||(await cache.match('./index.html'))||(await cache.match('./'));
+  const url=new URL(request.url);
+  const path=url.pathname.replace(/\/+$/,'')||'/';
+  const exact=await cache.match(request);
+  if(exact)return exact;
+  if(path==='/app'||path.endsWith('/index.html'))return (await cache.match('./index.html'))||(await cache.match('/index.html'));
+  if(path==='/privacy'||path.endsWith('/privacy.html'))return (await cache.match('./privacy.html'))||(await cache.match('/privacy.html'));
+  return (await cache.match('./landing.html'))||(await cache.match('/landing.html'));
 }
 
 async function navigationResponse(request){
   const cache=await caches.open(CACHE);
 
-  // When the browser already knows there is no connection, do not make a
-  // network request first. This keeps installed/offline launches quiet and
-  // avoids needlessly poking the OS connectivity layer in airplane mode.
   if(self.navigator?.onLine===false){
     const cached=await cachedNavigation(cache,request);
     if(cached)return cached;
@@ -36,7 +40,7 @@ async function navigationResponse(request){
 
   try{
     const response=await fetch(request);
-    if(response&&response.ok)cache.put('./index.html',response.clone());
+    if(response&&response.ok)cache.put(request,response.clone());
     return response;
   }catch(_){
     return cachedNavigation(cache,request);
@@ -68,6 +72,11 @@ async function externalResponse(request){
 self.addEventListener('fetch',event=>{
   if(event.request.method!=='GET')return;
   const url=new URL(event.request.url);
+
+  // Analytics is deliberately network-only. The serverless loader itself is
+  // not cached, and the Google tag is loaded only after explicit consent.
+  if(url.origin===location.origin&&url.pathname.startsWith('/.netlify/functions/'))return;
+
   if(event.request.mode==='navigate'&&url.origin===location.origin){
     event.respondWith(navigationResponse(event.request));
     return;
