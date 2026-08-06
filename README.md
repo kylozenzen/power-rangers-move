@@ -1,42 +1,56 @@
-# MOVED 2.0
+# MOVED
 
-A full three-pass upgrade of MOVED: strength, cardio, mixed sessions, smarter planning, visual polish, and a new identity.
+MOVED is the anti-fitness workout tracker: strength, cardio, and movement tracking without streak pressure, account friction, or motivational guilt trips.
 
-## What changed
+## Project structure
 
-### Pass 1 — Functionality
-- Strength / Cardio / Both start flow
-- Muscle-first workout builder with up to three muscle groups
-- Full-body conversion after three selections
-- 15 / 25 / 40 / 60-minute generated sessions
-- Reorder, swap, and shuffle the suggested plan
-- Cardio timer with distance, pace, effort, incline, resistance, and notes
-- Mixed strength + cardio sessions
-- Warm-up sets excluded from volume and PR calculations
-- Exercise notes and effort feedback
-- Edit completed sessions
-- Save sessions as custom routines
-- Backward-compatible import of MOVED v1 local data
+```text
+/
+├── index.html              # Tracker shell; kept at root for existing PWA installs
+├── manifest.json           # PWA manifest
+├── sw.js                   # Root-scoped service worker
+├── _redirects              # Public routes + compatibility aliases
+├── _headers                # Netlify cache rules
+├── app/
+│   ├── data/               # Exercise library, tiers, workout templates
+│   ├── scripts/
+│   │   ├── active/         # Active-workout modules
+│   │   ├── beta/           # Backup, recovery, offline diagnostics
+│   │   ├── analytics-hooks.js
+│   │   └── app.js
+│   └── styles/             # Tracker, active-workout, and beta styles
+├── site/
+│   ├── landing.html        # Public MOVED landing page
+│   ├── privacy.html        # Privacy policy
+│   ├── scripts/            # Landing-page behavior
+│   └── styles/             # Landing and privacy styles
+├── assets/
+│   └── icons/              # PWA and brand icons
+└── netlify/
+    └── functions/          # Consent-gated analytics loader
+```
 
-### Pass 2 — Visual system
-- New “shifted tile” MOVED logo and complete PWA icon pack
-- Animated launch screen
-- Rebuilt home movement cockpit
-- New Strength / Both / Cardio launch cards
-- Three-tab mobile navigation
-- Refined hierarchy, surfaces, gradients, typography, and microinteractions
-- New session cards and cardio interface
-- More of MOVED's low-pressure voice throughout
+The browser-facing asset URLs intentionally remain stable through Netlify rewrites. This lets older installed copies and cached pages continue requesting paths such as `/app.css`, `/icons/...`, and `/landing.css` even though the physical repository files now live in organized folders.
 
-### Pass 3 — Quiet intelligence
-- Weight, rep, set-volume, estimated-strength, cardio-length, and pace PRs
-- Weekly recap without streaks or guilt
-- Training-balance insights
-- Suggestions informed by recent muscle use, cardio balance, and “Had more” feedback
-- 15-minute full-body generator and 10-minute easy-cardio shortcut
-- Strength, cardio, equipment, and muscle analytics
+## Product principles
 
-## Deploy
-Upload the entire folder to Netlify, or replace the corresponding files in the existing site while keeping the folder structure intact.
+- Strength, cardio, and mixed workouts
+- Fast in-session set logging and editing
+- Active-session recovery across app closes
+- Real offline PWA use
+- Local-first workout history with backup and restore
+- No account required
+- No streak punishment or shame-based nudges
+- Optional consent-gated product analytics that never includes workout content
 
-The service-worker cache was bumped to `moved-v8`, so installed copies will refresh to the new shell.
+## Public routes
+
+- `/` — marketing / beta landing page
+- `/app` — workout tracker
+- `/privacy` — privacy policy
+
+## Deployment
+
+The site is deployed on Netlify. Keep `_redirects`, `_headers`, `manifest.json`, `index.html`, and `sw.js` at repository root unless the routing/PWA architecture is intentionally being changed.
+
+When app-shell paths change, bump the cache name in `sw.js` so installed copies receive the new shell.
