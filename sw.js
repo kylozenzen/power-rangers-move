@@ -1,7 +1,7 @@
-const CACHE='moved-v12';
+const CACHE='moved-v13';
 const SHELL=[
-  './','./index.html','./app.css','./active-controls.css','./active-controls-set-flow.css','./beta-infra.css','./app.js','./manifest.json',
-  './active-controls-core.js','./active-controls-sets.js','./active-controls-exercises.js','./active-controls-render.js','./active-controls-inline-edit.js','./beta-infra.js',
+  './','./index.html','./app.css','./active-controls.css','./active-controls-set-flow.css','./beta-infra.css','./beta-diagnostics.css','./app.js','./manifest.json',
+  './active-controls-core.js','./active-controls-sets.js','./active-controls-exercises.js','./active-controls-render.js','./active-controls-inline-edit.js','./beta-infra.js','./beta-diagnostics.js',
   './data/exercises.js','./data/tiers.js','./data/workout-templates.js',
   './icons/logo-mark.svg','./icons/logo-mark.png','./icons/icon-32.png','./icons/icon-180.png',
   './icons/icon-192.png','./icons/icon-512.png','./icons/maskable-192.png','./icons/maskable-512.png'
