@@ -1,0 +1,5 @@
+/* Add Set logs the current row, then prepares the next one. */
+.colhead.fac-colhead,.set-row.fac-set-row{grid-template-columns:22px minmax(0,1fr) minmax(0,1fr) 31px 34px}
+.fac-set-logged,.fac-set-current{border-radius:11px;animation:none!important}.fac-set-logged{background:rgba(57,225,180,.035);box-shadow:0 0 0 1px rgba(57,225,180,.08) inset}.fac-set-logged .si{color:var(--ok);display:grid;place-items:center;gap:1px}.fac-logged-tick{font-size:7px;line-height:1;color:var(--ok)}.fac-set-logged .numwrap{opacity:.94}.fac-set-logged .numwrap input{color:var(--ink)}.fac-set-current{box-shadow:0 0 0 1px rgba(45,212,255,.08) inset}.fac-log-set{margin-top:8px;border-color:rgba(57,225,180,.24);background:rgba(57,225,180,.07);color:var(--ok)}
+.sets .fac-set-row,.sets .fac-set-row>*{transition:none!important}
+@media(max-width:390px){.colhead.fac-colhead,.set-row.fac-set-row{grid-template-columns:18px minmax(0,1fr) minmax(0,1fr) 28px 30px}}
