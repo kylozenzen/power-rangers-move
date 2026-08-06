@@ -1,4 +1,4 @@
-const CACHE='moved-v13';
+const CACHE='moved-v14';
 const SHELL=[
   './','./index.html','./app.css','./active-controls.css','./active-controls-set-flow.css','./beta-infra.css','./beta-diagnostics.css','./app.js','./manifest.json',
   './active-controls-core.js','./active-controls-sets.js','./active-controls-exercises.js','./active-controls-render.js','./active-controls-inline-edit.js','./beta-infra.js','./beta-diagnostics.js',
@@ -39,7 +39,7 @@ async function shellResponse(request){
     if(response&&response.ok)cache.put(request,response.clone());
     return response;
   }catch(_){
-    return cache.match('./index.html');
+    return Response.error();
   }
 }
 
