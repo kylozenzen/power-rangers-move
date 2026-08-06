@@ -38,6 +38,50 @@
     };
   }
 
+  // Product telemetry is intentionally binary. These events answer whether a
+  // core action worked without attaching the workout's type, duration,
+  // exercises, weights, reps, notes, totals, or any other workout content.
+  ['startBuiltWorkout','startEmptyStrength','startFromSession','startFromTemplate','startFromRoutine'].forEach(name => {
+    const original = window[name];
+    if (typeof original !== 'function') return;
+    window[name] = function movedTrackedWorkoutStart(...args) {
+      const hadActive = !!window.state?.active;
+      const result = original.apply(this, args);
+      if (!hadActive && window.state?.active && window.state.active.editingIndex === null) track('workout_started');
+      return result;
+    };
+  });
+
+  if (typeof window.finishWorkout === 'function') {
+    const originalFinishWorkout = window.finishWorkout;
+    window.finishWorkout = function movedTrackedWorkoutFinish(...args) {
+      const beforeCount = Array.isArray(window.state?.workouts) ? window.state.workouts.length : 0;
+      const wasEditing = window.state?.active?.editingIndex !== null;
+      const result = originalFinishWorkout.apply(this, args);
+      const afterCount = Array.isArray(window.state?.workouts) ? window.state.workouts.length : 0;
+      if (!wasEditing && afterCount > beforeCount) track('workout_completed');
+      return result;
+    };
+  }
+
+  if (typeof window.exportData === 'function') {
+    const originalExportData = window.exportData;
+    window.exportData = function movedTrackedBackup(...args) {
+      const result = originalExportData.apply(this, args);
+      track('backup_exported');
+      return result;
+    };
+  }
+
+  if (window.MovedBeta?.verifyOffline) {
+    const originalVerifyOffline = window.MovedBeta.verifyOffline;
+    window.MovedBeta.verifyOffline = async function movedTrackedOfflineCheck(...args) {
+      track('offline_check_started');
+      return originalVerifyOffline.apply(this, args);
+    };
+    window.betaVerifyOffline = window.MovedBeta.verifyOffline;
+  }
+
   const reportOpen = () => track('app_open', {
     app_surface: (window.matchMedia?.('(display-mode: standalone)').matches || navigator.standalone === true) ? 'installed' : 'browser'
   });
