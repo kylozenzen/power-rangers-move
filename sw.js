@@ -1,4 +1,4 @@
-const CACHE='moved-v17';
+const CACHE='moved-v18';
 const SHELL=[
   './index.html','./landing-v2.html','./privacy.html','./landing.css','./landing-story.css','./landing.js','./privacy.css','./analytics-hooks.js',
   './app.css','./active-controls.css','./active-controls-set-flow.css','./beta-infra.css','./beta-diagnostics.css','./app.js','./manifest.json',

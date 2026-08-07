@@ -1,5 +1,33 @@
+# Public routes
 /app /index.html 200!
-/app/ /index.html 200!
-/privacy /privacy.html 200!
-/privacy/ /privacy.html 200!
-/ /landing-v2.html 200!
+/app/ /app 301!
+/privacy /site/privacy.html 200!
+/privacy/ /privacy 301!
+/privacy.html /site/privacy.html 200!
+/landing.html /site/landing.html 200!
+/landing-v2.html /site/landing.html 200!
+/ /site/landing.html 200!
+
+# App asset compatibility aliases
+/app.css /app/styles/app.css 200!
+/active-controls.css /app/styles/active-controls.css 200!
+/active-controls-set-flow.css /app/styles/active-controls-set-flow.css 200!
+/beta-infra.css /app/styles/beta-infra.css 200!
+/beta-diagnostics.css /app/styles/beta-diagnostics.css 200!
+/app.js /app/scripts/app.js 200!
+/analytics-hooks.js /app/scripts/analytics-hooks.js 200!
+/active-controls-core.js /app/scripts/active/core.js 200!
+/active-controls-sets.js /app/scripts/active/sets.js 200!
+/active-controls-exercises.js /app/scripts/active/exercises.js 200!
+/active-controls-render.js /app/scripts/active/render.js 200!
+/active-controls-inline-edit.js /app/scripts/active/inline-edit.js 200!
+/beta-infra.js /app/scripts/beta/infra.js 200!
+/beta-diagnostics.js /app/scripts/beta/diagnostics.js 200!
+/data/* /app/data/:splat 200!
+
+# Shared assets and marketing aliases
+/icons/* /assets/icons/:splat 200!
+/landing.css /site/styles/landing.css 200!
+/landing-story.css /site/styles/landing-story.css 200!
+/privacy.css /site/styles/privacy.css 200!
+/landing.js /site/scripts/landing.js 200!
