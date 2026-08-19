@@ -12,6 +12,7 @@
 /app.css /app/styles/app.css 200!
 /active-controls.css /app/styles/active-controls.css 200!
 /active-controls-set-flow.css /app/styles/active-controls-set-flow.css 200!
+/exercise-focus.css /app/styles/exercise-focus.css 200!
 /beta-infra.css /app/styles/beta-infra.css 200!
 /beta-diagnostics.css /app/styles/beta-diagnostics.css 200!
 /app.js /app/scripts/app.js 200!
