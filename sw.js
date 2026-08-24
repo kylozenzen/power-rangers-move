@@ -1,7 +1,7 @@
-const CACHE='moved-v18';
+const CACHE='moved-v19';
 const SHELL=[
   './index.html','./landing-v2.html','./privacy.html','./landing.css','./landing-story.css','./landing.js','./privacy.css','./analytics-hooks.js',
-  './app.css','./active-controls.css','./active-controls-set-flow.css','./beta-infra.css','./beta-diagnostics.css','./app.js','./manifest.json',
+  './app.css','./active-controls.css','./active-controls-set-flow.css','./exercise-focus.css','./beta-infra.css','./beta-diagnostics.css','./app.js','./manifest.json',
   './active-controls-core.js','./active-controls-sets.js','./active-controls-exercises.js','./active-controls-render.js','./active-controls-inline-edit.js','./beta-infra.js','./beta-diagnostics.js',
   './data/exercises.js','./data/tiers.js','./data/workout-templates.js',
   './icons/logo-mark.svg','./icons/logo-mark.png','./icons/icon-32.png','./icons/icon-180.png',
