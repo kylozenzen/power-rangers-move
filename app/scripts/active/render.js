@@ -3,23 +3,91 @@
   "use strict";
   const FAC=window.MovedActiveControls;
   if(FAC.focusExerciseIndex===undefined)FAC.focusExerciseIndex=null;
+  if(FAC.pendingFocus===undefined)FAC.pendingFocus=null;
+
+  /* Every action re-renders #view from scratch, so focus and overlay scroll are
+     captured before the swap and put back after it. Keys live on the markup as
+     data-focus-key, which survives the rebuild even though the nodes do not. */
+  let focusSnapshot={key:null,scrollTop:null};
+  const focusSelector=key=>`[data-focus-key="${String(key).replace(/["\\]/g,"\\$&")}"]`;
+  const focusTarget=key=>{try{return key?document.querySelector(focusSelector(key)):null;}catch(_){return null;}};
+
+  FAC.captureFocusState=function(){
+    let key=null,scrollTop=null;
+    try{
+      key=document.activeElement?.dataset?.focusKey||null;
+      const scroller=$(".fac-focus-scroll");
+      if(scroller)scrollTop=scroller.scrollTop;
+    }catch(_){}
+    focusSnapshot={key,scrollTop};
+  };
+  /* Safe to call more than once per render: the last DOM writer of the frame
+     (inline editing unlocks logged rows after us) calls it again. */
+  FAC.restoreFocusState=function(){
+    try{
+      const scroller=$(".fac-focus-scroll");
+      if(scroller&&focusSnapshot.scrollTop!==null&&scroller.scrollTop!==focusSnapshot.scrollTop)scroller.scrollTop=focusSnapshot.scrollTop;
+      const key=FAC.pendingFocus||focusSnapshot.key;
+      FAC.pendingFocus=null;
+      const target=focusTarget(key);
+      if(!target||target.disabled||target===document.activeElement)return;
+      if(target.closest?.("[inert]"))return;
+      target.focus({preventScroll:true});
+    }catch(_){}
+  };
+
+  function handleFocusEscape(ev){
+    if(ev.key!=="Escape"&&ev.key!=="Esc")return;
+    if(FAC.focusExerciseIndex===null||!$(".fac-focus-overlay"))return;
+    if($("#sheet")?.classList.contains("open"))return;
+    ev.preventDefault();FAC.closeExerciseFocus();
+  }
+  /* Everything the overlay covers goes inert: the queue it sits in, plus the
+     header, nav, and rest bar it paints over. Sheets stack above it and stay
+     live. Only what we marked gets cleared again. */
+  const FOCUS_KEEP_LIVE=["scrim","toast"],NON_RENDERED=["SCRIPT","STYLE","LINK","TEMPLATE","META"];
+  /* The sheet lives above the overlay but is only reachable while it is open —
+     closed it is merely translated off-screen, so it stays tabbable. */
+  FAC.syncSheetInert=function(){
+    const sheet=$("#sheet");if(!sheet)return;
+    if(FAC.focusExerciseIndex!==null&&!sheet.classList.contains("open")){sheet.inert=true;sheet.setAttribute("inert","");sheet.setAttribute("data-fac-inert","");}
+    else{sheet.inert=false;sheet.removeAttribute("inert");sheet.removeAttribute("data-fac-inert");}
+  };
+  FAC.setFocusMode=function(open){
+    document.body.classList.toggle("fac-focus-open",open);
+    $$("[data-fac-inert]").forEach(el=>{el.inert=false;el.removeAttribute("inert");el.removeAttribute("data-fac-inert");});
+    const overlay=open?$(".fac-focus-overlay"):null;
+    for(let node=overlay;node?.parentElement&&node!==document.body;node=node.parentElement){
+      Array.from(node.parentElement.children).forEach(sibling=>{
+        if(sibling===node||sibling.id==="sheet"||FOCUS_KEEP_LIVE.includes(sibling.id))return;
+        if(NON_RENDERED.includes(sibling.tagName))return;
+        sibling.inert=true;sibling.setAttribute("inert","");sibling.setAttribute("data-fac-inert","");
+      });
+    }
+    FAC.syncSheetInert();
+    if(open===FAC.focusEscapeBound)return;
+    FAC.focusEscapeBound=open;
+    if(open)document.addEventListener("keydown",handleFocusEscape);
+    else document.removeEventListener("keydown",handleFocusEscape);
+  };
 
   FAC.openExerciseFocus=function(ei){
     const e=state.active?.exercises?.[ei];if(!e)return;
-    FAC.focusExerciseIndex=ei;
+    FAC.focusExerciseIndex=ei;FAC.pendingFocus="focus-overlay";
     state.active.exercises.forEach((x,i)=>x.collapsed=i!==ei);
     save();renderWorkout();
   };
   FAC.closeExerciseFocus=function(){
-    if(state.active?.exercises?.[FAC.focusExerciseIndex])state.active.exercises[FAC.focusExerciseIndex].collapsed=true;
-    FAC.focusExerciseIndex=null;
+    const ei=FAC.focusExerciseIndex;
+    if(state.active?.exercises?.[ei])state.active.exercises[ei].collapsed=true;
+    FAC.focusExerciseIndex=null;FAC.pendingFocus=ei===null?null:`queue-${ei}`;
     save();renderWorkout();
   };
   FAC.finishExerciseFocus=function(){
-    const e=state.active?.exercises?.[FAC.focusExerciseIndex];
+    const ei=FAC.focusExerciseIndex,e=state.active?.exercises?.[ei];
     const name=e?.name||"Exercise";
     if(e)e.collapsed=true;
-    FAC.focusExerciseIndex=null;
+    FAC.focusExerciseIndex=null;FAC.pendingFocus=ei===null?null:`queue-${ei}`;
     save();renderWorkout();toast(`${name} finished`);
   };
   FAC.updateFocusRest=function(){
@@ -37,7 +105,19 @@
       time.textContent=state.restTimer===false?"Off":"Ready";
       if(fill)fill.style.width="0%";
     }
-    $$("#fac-focus-rest [data-rest-action]").forEach(button=>button.disabled=!active);
+    /* This runs every second. Disabling the focused button blurs it to <body>,
+       so only write when the state changes and hand focus somewhere useful. */
+    $$("#fac-focus-rest [data-rest-action]").forEach(button=>{
+      const next=!active;
+      if(button.disabled===next)return;
+      const stealing=next&&document.activeElement===button;
+      button.disabled=next;
+      if(stealing)FAC.focusAfterRest();
+    });
+  };
+  FAC.focusAfterRest=function(){
+    const target=(FAC.focusExerciseIndex!==null&&focusTarget(`log-${FAC.focusExerciseIndex}`))||$(".fac-focus-overlay");
+    try{target?.focus({preventScroll:true});}catch(_){}
   };
 
   startLiveTimer=function(){
@@ -57,7 +137,7 @@
   renderActiveWorkout=function(){
     const a=state.active,type=sessionType(a),editing=FAC.isEditing(),paused=FAC.isPaused(),ctl=FAC.loadControl();
     if(FAC.focusExerciseIndex!==null&&!a.exercises?.[FAC.focusExerciseIndex])FAC.focusExerciseIndex=null;
-    if(FAC.focusExerciseIndex===null&&a.exercises?.length){
+    if(FAC.focusExerciseIndex===null&&!FAC.ignoreLegacyFocus&&a.exercises?.length){
       const legacyFocus=a.exercises.findIndex(e=>e.collapsed===false);
       if(legacyFocus>=0)FAC.focusExerciseIndex=legacyFocus;
     }
@@ -71,17 +151,17 @@
     html+=`<div class="wk-total"><div class="metric"><div class="n mono spectrum-text" id="live-strength">${fmt(loggedVolume(a))}</div><div class="l">${state.unit} strength</div></div><div class="divider"></div><div class="metric"><div class="n mono spectrum-text" id="live-cardio">${fmtMinutes(cardioSeconds(a))}</div><div class="l">cardio minutes</div></div></div>`;
     if(type!=="cardio")html+=renderExercises(a);
     if(type!=="strength")html+=(a.cardio||[]).map((c,i)=>renderCardioBlock(c,i)).join("");
-    if(type!=="cardio")html+=`<button class="btn btn-ghost" onclick="openPicker()" style="margin-top:3px"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add exercise</button>`;
+    if(type!=="cardio")html+=`<button class="btn btn-ghost" data-focus-key="add-exercise" onclick="openPicker()" style="margin-top:3px"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add exercise</button>`;
     html+=`<div style="height:93px"></div><div class="wk-actions"><button class="btn btn-ghost" style="width:auto" onclick="cancelWorkout()">${editing?"Cancel":"Discard"}</button><button class="btn btn-primary spectrum-bg" onclick="finishWorkout()"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>${editing?"Save changes":"Finish"}</button></div>`;
     $("#view").innerHTML=html;
-    document.body.classList.toggle("fac-focus-open",FAC.focusExerciseIndex!==null);
+    FAC.setFocusMode(FAC.focusExerciseIndex!==null);
     startLiveTimer();setTimeout(FAC.bindSetGestures,0);
   };
 
   function renderExerciseQueueCard(e,ei){
     const col=CAT_COLOR[e.cat]||"#ff83d1",logged=e.sets.filter(s=>s.done),done=logged.length>0,exVol=logged.reduce((t,s)=>t+setVolume(s),0);
     const summary=done?`${logged.length} set${logged.length===1?'':'s'} · ${fmt(exVol)} ${state.unit}`:"Tap to focus";
-    return `<div class="ex collapsed fac-queue-ex ${done?'has-work':'pending'}" id="ex-${ei}" onclick="facOpenExerciseFocus(${ei})"><div class="ex-h"><button class="ex-check ${done?'done spectrum-bg':''}" onclick="event.stopPropagation();facOpenExerciseFocus(${ei})" aria-label="Open ${escAttr(e.name)}"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></button><span class="pill" style="background:${col}22;color:${col}">${e.cat}</span><span class="nm">${esc(e.name)}</span><span class="ex-sum ${done?'':'todo'}">${summary}</span>${done?`<button class="fac-undo-mini" onclick="event.stopPropagation();facUndoExercise(${ei})">Undo</button>`:""}<button class="x" onclick="event.stopPropagation();removeEx(${ei})" aria-label="Remove ${escAttr(e.name)}">×</button></div></div>`;
+    return `<div class="ex collapsed fac-queue-ex ${done?'has-work':'pending'}" id="ex-${ei}" tabindex="-1" data-focus-key="queue-${ei}" onclick="facOpenExerciseFocus(${ei})"><div class="ex-h"><button class="ex-check ${done?'done spectrum-bg':''}" onclick="event.stopPropagation();facOpenExerciseFocus(${ei})" aria-label="Open ${escAttr(e.name)}"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></button><span class="pill" style="background:${col}22;color:${col}">${e.cat}</span><span class="nm">${esc(e.name)}</span><span class="ex-sum ${done?'':'todo'}">${summary}</span>${done?`<button class="fac-undo-mini" onclick="event.stopPropagation();facUndoExercise(${ei})">Undo</button>`:""}<button class="x" onclick="event.stopPropagation();removeEx(${ei})" aria-label="Remove ${escAttr(e.name)}">×</button></div></div>`;
   }
 
   function renderFocusedExercise(a,ei){
@@ -95,7 +175,7 @@
     const currentSet=e.sets[pendingIndex]||e.sets[e.sets.length-1];
     const activeRest=typeof rest!=="undefined"&&rest.endsAt>Date.now();
     const restLabel=activeRest?fmtDurSeconds((rest.endsAt-Date.now())/1000):(state.restTimer===false?"Off":"Ready");
-    let html=`<div class="fac-focus-overlay" role="dialog" aria-modal="true" aria-labelledby="fac-focus-title">
+    let html=`<div class="fac-focus-overlay" role="dialog" aria-modal="true" aria-labelledby="fac-focus-title" tabindex="-1" data-focus-key="focus-overlay">
       <div class="fac-focus-topbar">
         <button class="fac-focus-back" onclick="facCloseExerciseFocus()"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg><span>Workout</span></button>
         <span class="fac-focus-position">Exercise ${ei+1} of ${a.exercises.length}</span>
@@ -115,18 +195,18 @@
           <div class="sets fac-focus-sets"><div class="colhead fac-colhead"><div>#</div><div>${isbw?'Added '+state.unit:'Weight'}</div><div>${isbw?'Reps / sec':'Reps'}</div><div>WU</div><div></div></div>`;
     e.sets.forEach((s,si)=>{
       if(s.done){
-        html+=`<div class="set-row fac-set-row fac-set-logged" data-ei="${ei}" data-si="${si}"><div class="si">${si+1}</div><div class="fac-logged-value mono">${s.w||0}</div><div class="fac-logged-value mono">${s.r||0}</div><button class="warm-btn ${s.warmup?'on':''}" disabled>${s.warmup?'W':'·'}</button><button class="fac-set-more" onclick="facOpenSetMenu(${ei},${si})" aria-label="More set actions">•••</button></div>`;
+        html+=`<div class="set-row fac-set-row fac-set-logged" data-ei="${ei}" data-si="${si}"><div class="si">${si+1}</div><div class="fac-logged-value mono">${s.w||0}</div><div class="fac-logged-value mono">${s.r||0}</div><button class="warm-btn ${s.warmup?'on':''}" disabled>${s.warmup?'W':'·'}</button><button class="fac-set-more" data-focus-key="more-${ei}-${si}" onclick="facOpenSetMenu(${ei},${si})" aria-label="More set actions">•••</button></div>`;
       }else{
-        html+=`<div class="set-row fac-set-row fac-set-current" data-ei="${ei}" data-si="${si}"><div class="si">${si+1}</div><div class="numwrap"><button onclick="stepSet(${ei},${si},'w',-1)">−</button><input type="number" inputmode="decimal" value="${s.w}" onfocus="this.select()" onchange="setVal(${ei},${si},'w',this.value)"><button onclick="stepSet(${ei},${si},'w',1)">+</button></div><div class="numwrap"><button onclick="stepSet(${ei},${si},'r',-1)">−</button><input type="number" inputmode="numeric" value="${s.r}" onfocus="this.select()" onchange="setVal(${ei},${si},'r',this.value)"><button onclick="stepSet(${ei},${si},'r',1)">+</button></div><button class="warm-btn ${s.warmup?'on':''}" onclick="toggleWarmup(${ei},${si})">W</button><button class="fac-set-more" onclick="facOpenSetMenu(${ei},${si})" aria-label="More set actions">•••</button></div>`;
+        html+=`<div class="set-row fac-set-row fac-set-current" data-ei="${ei}" data-si="${si}"><div class="si">${si+1}</div><div class="numwrap"><button data-focus-key="w-${ei}-${si}-down" onclick="stepSet(${ei},${si},'w',-1)">−</button><input data-focus-key="w-${ei}-${si}-input" type="number" inputmode="decimal" value="${s.w}" onfocus="this.select()" onchange="setVal(${ei},${si},'w',this.value)"><button data-focus-key="w-${ei}-${si}-up" onclick="stepSet(${ei},${si},'w',1)">+</button></div><div class="numwrap"><button data-focus-key="r-${ei}-${si}-down" onclick="stepSet(${ei},${si},'r',-1)">−</button><input data-focus-key="r-${ei}-${si}-input" type="number" inputmode="numeric" value="${s.r}" onfocus="this.select()" onchange="setVal(${ei},${si},'r',this.value)"><button data-focus-key="r-${ei}-${si}-up" onclick="stepSet(${ei},${si},'r',1)">+</button></div><button class="warm-btn ${s.warmup?'on':''}" data-focus-key="wu-${ei}-${si}" onclick="toggleWarmup(${ei},${si})">W</button><button class="fac-set-more" data-focus-key="more-${ei}-${si}" onclick="facOpenSetMenu(${ei},${si})" aria-label="More set actions">•••</button></div>`;
       }
     });
-    html+=`</div><button class="add-set fac-log-set fac-focus-log" onclick="facLogAndAddSet(${ei})"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>Log set + add next</button></section>
+    html+=`</div><button class="add-set fac-log-set fac-focus-log" data-focus-key="log-${ei}" onclick="facLogAndAddSet(${ei})"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>Log set + add next</button></section>
         <section class="fac-focus-rest" id="fac-focus-rest">
           <div class="fac-focus-rest-fill" id="fac-focus-rest-fill"></div>
           <div class="fac-focus-rest-copy"><span class="eyebrow">Rest timer</span><strong class="mono" id="fac-focus-rest-time">${restLabel}</strong><small>${state.restTimer===false?"Turn it on in settings if you want it.":activeRest?"Recover. Hydrate. Pretend not to check your phone.":"Starts automatically after you log a set."}</small></div>
-          <div class="fac-focus-rest-actions"><button data-rest-action onclick="restAdjust(-15);facUpdateFocusRest()">−15</button><button data-rest-action onclick="restAdjust(30);facUpdateFocusRest()">+30</button><button data-rest-action class="fac-rest-skip" onclick="restSkip();facUpdateFocusRest()">Skip</button></div>
+          <div class="fac-focus-rest-actions"><button data-rest-action data-focus-key="rest-minus" onclick="restAdjust(-15);facUpdateFocusRest()">−15</button><button data-rest-action data-focus-key="rest-plus" onclick="restAdjust(30);facUpdateFocusRest()">+30</button><button data-rest-action data-focus-key="rest-skip" class="fac-rest-skip" onclick="restSkip();facUpdateFocusRest()">Skip</button></div>
         </section>
-        <section class="fac-focus-card fac-focus-effort"><div class="fac-focus-section-h"><div><span class="eyebrow">Effort</span><h3>How did it feel?</h3></div></div><div class="fac-focus-effort-grid">${[["More","Had more"],["Right","About right"],["Max","Barely survived"]].map(([v,label])=>`<button class="${e.effort===v?'on':''}" onclick="setEffort(${ei},'${v}')">${label}</button>`).join("")}</div></section>
+        <section class="fac-focus-card fac-focus-effort"><div class="fac-focus-section-h"><div><span class="eyebrow">Effort</span><h3>How did it feel?</h3></div></div><div class="fac-focus-effort-grid">${[["More","Had more"],["Right","About right"],["Max","Barely survived"]].map(([v,label])=>`<button class="${e.effort===v?'on':''}" data-focus-key="effort-${ei}-${v}" onclick="setEffort(${ei},'${v}')">${label}</button>`).join("")}</div></section>
         <div class="fac-focus-bottom-space"></div>
       </div>
       <div class="fac-focus-footer"><button class="btn btn-primary spectrum-bg" onclick="facFinishExerciseFocus()"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>Finish exercise</button></div>
@@ -155,14 +235,35 @@
     });
   };
 
+  const originalOpenSheet=openSheet;
+  openSheet=function(){originalOpenSheet();FAC.syncSheetInert();};
+  const originalCloseSheet=closeSheet;
+  closeSheet=function(){originalCloseSheet();FAC.syncSheetInert();};
   const originalToggleDone=toggleDone;
   toggleDone=function(ei,si){
     const wasDone=!!state.active?.exercises?.[ei]?.sets?.[si]?.done;
     originalToggleDone(ei,si);if(wasDone)cancelRest();
   };
+  const baseRenderWorkout=renderWorkout;
+  renderWorkout=function(){
+    FAC.captureFocusState();baseRenderWorkout();FAC.restoreFocusState();
+  };
+  const originalUndoExercise=FAC.undoExercise;
+  FAC.undoExercise=function(ei){
+    const closed=FAC.focusExerciseIndex===null;
+    FAC.ignoreLegacyFocus=closed;
+    if(closed)FAC.pendingFocus=`queue-${ei}`;
+    try{originalUndoExercise(ei);}finally{FAC.ignoreLegacyFocus=false;}
+  };
+  const originalRemoveEx=removeEx;
+  removeEx=function(i){
+    const total=state.active?.exercises?.length||0;
+    if(FAC.focusExerciseIndex===null)FAC.pendingFocus=i<total-1?`queue-${i}`:"add-exercise";
+    originalRemoveEx(i);
+  };
   const originalCancelWorkout=cancelWorkout;
   cancelWorkout=function(){
-    const hadActive=!!state.active;originalCancelWorkout();if(hadActive&&!state.active){FAC.focusExerciseIndex=null;document.body.classList.remove("fac-focus-open");FAC.clearControl();}
+    const hadActive=!!state.active;originalCancelWorkout();if(hadActive&&!state.active){FAC.focusExerciseIndex=null;FAC.pendingFocus=null;FAC.setFocusMode(false);FAC.clearControl();}
   };
   finishWorkout=function(){
     const a=state.active;if(!a)return;(a.cardio||[]).forEach(pauseCardio);
@@ -175,13 +276,14 @@
     delete cleaned.startedAt;delete cleaned.originalDurationSec;
     const editIndex=cleaned.editingIndex,prs=detectPRs(cleaned,editIndex);delete cleaned.editingIndex;
     if(editIndex!==null)state.workouts[editIndex]=cleaned;else state.workouts.push(cleaned);
-    state.active=null;FAC.focusExerciseIndex=null;document.body.classList.remove("fac-focus-open");FAC.clearControl();cancelRest();clearLiveTimer();releaseWake();save();resetStartFlow();go("home");showSummary(cleaned,prs,editIndex!==null);
+    state.active=null;FAC.focusExerciseIndex=null;FAC.pendingFocus=null;FAC.setFocusMode(false);FAC.clearControl();cancelRest();clearLiveTimer();releaseWake();save();resetStartFlow();go("home");showSummary(cleaned,prs,editIndex!==null);
   };
 
   window.facOpenExerciseFocus=FAC.openExerciseFocus;
   window.facCloseExerciseFocus=FAC.closeExerciseFocus;
   window.facFinishExerciseFocus=FAC.finishExerciseFocus;
   window.facUpdateFocusRest=FAC.updateFocusRest;
+  window.facUndoExercise=FAC.undoExercise;
 
   window.addEventListener("storage",e=>{if(e.key===FAC.key&&state.active)renderWorkout();});
   if(state.active){FAC.saveControl(FAC.loadControl());render();}

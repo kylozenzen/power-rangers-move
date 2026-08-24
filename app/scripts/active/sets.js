@@ -43,6 +43,7 @@
       e.sets.splice(si+1,0,{w:+s.w||0,r:+s.r||0,done:false,warmup:false});
       nextIndex=si+1;
     }
+    FAC.pendingFocus=`log-${ei}`;
     save();renderWorkout();
     setTimeout(()=>{
       const row=$(`.fac-set-row[data-ei="${ei}"][data-si="${nextIndex}"]`);

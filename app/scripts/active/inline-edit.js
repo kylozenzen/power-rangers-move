@@ -6,20 +6,22 @@
   FAC.inlineEditingInstalled=true;
 
   FAC.unlockLoggedRows=function(){
+    let unlocked=0;
     $$(".fac-set-logged").forEach(row=>{
       if(row.dataset.editable==="true")return;
       const ei=+row.dataset.ei,si=+row.dataset.si;
       const e=state.active?.exercises?.[ei],s=e?.sets?.[si];
       if(!e||!s||!s.done)return;
-      row.dataset.editable="true";
+      row.dataset.editable="true";unlocked++;
       row.classList.add("fac-set-editable");
       row.innerHTML=`
         <div class="si">${si+1}<span class="fac-logged-tick">✓</span></div>
-        <div class="numwrap"><button onclick="stepSet(${ei},${si},'w',-1)">−</button><input type="number" inputmode="decimal" value="${s.w}" onfocus="this.select()" onchange="setVal(${ei},${si},'w',this.value)"><button onclick="stepSet(${ei},${si},'w',1)">+</button></div>
-        <div class="numwrap"><button onclick="stepSet(${ei},${si},'r',-1)">−</button><input type="number" inputmode="numeric" value="${s.r}" onfocus="this.select()" onchange="setVal(${ei},${si},'r',this.value)"><button onclick="stepSet(${ei},${si},'r',1)">+</button></div>
-        <button class="warm-btn ${s.warmup?'on':''}" onclick="toggleWarmup(${ei},${si})">W</button>
-        <button class="fac-set-more" onclick="facOpenSetMenu(${ei},${si})" aria-label="More set actions">•••</button>`;
+        <div class="numwrap"><button data-focus-key="w-${ei}-${si}-down" onclick="stepSet(${ei},${si},'w',-1)">−</button><input data-focus-key="w-${ei}-${si}-input" type="number" inputmode="decimal" value="${s.w}" onfocus="this.select()" onchange="setVal(${ei},${si},'w',this.value)"><button data-focus-key="w-${ei}-${si}-up" onclick="stepSet(${ei},${si},'w',1)">+</button></div>
+        <div class="numwrap"><button data-focus-key="r-${ei}-${si}-down" onclick="stepSet(${ei},${si},'r',-1)">−</button><input data-focus-key="r-${ei}-${si}-input" type="number" inputmode="numeric" value="${s.r}" onfocus="this.select()" onchange="setVal(${ei},${si},'r',this.value)"><button data-focus-key="r-${ei}-${si}-up" onclick="stepSet(${ei},${si},'r',1)">+</button></div>
+        <button class="warm-btn ${s.warmup?'on':''}" data-focus-key="wu-${ei}-${si}" onclick="toggleWarmup(${ei},${si})">W</button>
+        <button class="fac-set-more" data-focus-key="more-${ei}-${si}" onclick="facOpenSetMenu(${ei},${si})" aria-label="More set actions">•••</button>`;
     });
+    if(unlocked)FAC.restoreFocusState?.();
   };
 
   const baseRenderWorkout=renderWorkout;
@@ -45,9 +47,6 @@
     const s=e.sets[si];
     if((+s.r||0)<=0)return toast("Add reps before logging this set");
 
-    const before=$(`.fac-set-row[data-ei="${ei}"][data-si="${si}"]`);
-    const beforeTop=before?.getBoundingClientRect().top;
-
     s.done=true;haptic();startRest();
     let nextIndex=e.sets.findIndex((x,i)=>i>si&&!x.done);
     if(nextIndex<0){
@@ -55,13 +54,13 @@
       nextIndex=si+1;
     }
 
+    /* Focus stays on the Log button: focusing the new weight input would pop the
+       mobile keyboard mid-workout. The next row is brought to the eye instead. */
+    FAC.pendingFocus=`log-${ei}`;
     save();renderWorkout();
 
-    const after=$(`.fac-set-row[data-ei="${ei}"][data-si="${si}"]`);
-    if(Number.isFinite(beforeTop)&&after){
-      const delta=after.getBoundingClientRect().top-beforeTop;
-      if(Math.abs(delta)>1)window.scrollBy(0,delta);
-    }
+    const current=$(`.fac-set-current[data-ei="${ei}"][data-si="${nextIndex}"]`)||$(`.fac-set-current[data-ei="${ei}"]`);
+    current?.scrollIntoView({block:"center",behavior:state.anim===false?"auto":"smooth"});
     toast(`Set ${si+1} logged · next one ready`);
   };
 

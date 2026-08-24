@@ -19,3 +19,9 @@ body.fac-focus-open{overflow:hidden}
 
 @media(max-width:390px){.fac-focus-scroll{padding-left:13px;padding-right:13px}.fac-focus-topbar{padding-left:13px;padding-right:13px}.fac-focus-overlay .colhead.fac-colhead,.fac-focus-overlay .set-row.fac-set-row{grid-template-columns:18px minmax(0,1fr) minmax(0,1fr) 28px 32px;gap:3px}.fac-focus-overlay .fac-set-more{width:32px}.fac-focus-rest{grid-template-columns:1fr}.fac-focus-rest-actions{justify-content:flex-start}.fac-focus-effort-grid{gap:5px;padding-left:10px;padding-right:10px}.fac-focus-effort-grid button{font-size:8.8px}}
 @media(prefers-reduced-motion:reduce){.fac-focus-overlay{animation:none}}
+
+/* Dialog behaviour — the queue behind the overlay is inert while it is open.
+   Browsers without the inert property still get the tap blocking from here. */
+body.fac-focus-open [data-fac-inert]{pointer-events:none;user-select:none;-webkit-user-select:none}
+.fac-focus-overlay:focus{outline:none}
+.fac-queue-ex:focus{outline:none}.fac-queue-ex:focus-visible{outline:2px solid rgba(198,92,255,.5);outline-offset:2px}
