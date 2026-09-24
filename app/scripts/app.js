@@ -3,6 +3,7 @@
 /* ============ STATE + MIGRATION ============ */
 const KEY = "moved_v2";
 const LEGACY_KEY = "moved_v1";
+const DEMO_BACKUP_KEY = "moved_pre_demo_backup";
 const DEFAULTS = {
   version:2,
   name:"",
@@ -16,7 +17,8 @@ const DEFAULTS = {
   workouts:[],
   active:null,
   customRoutines:[],
-  onboardingSeen:false
+  onboardingSeen:false,
+  dismissedTips:[]
 };
 let state = structuredCloneSafe(DEFAULTS);
 
@@ -85,6 +87,7 @@ function load(){
     state.workouts=(parsed.workouts||[]).map(migrateSession);
     state.active=parsed.active?migrateSession(parsed.active):null;
     state.customRoutines=Array.isArray(parsed.customRoutines)?parsed.customRoutines:[];
+    state.dismissedTips=Array.isArray(parsed.dismissedTips)?parsed.dismissedTips:[];
     state.version=2;
     save();
   }catch(err){ console.warn("MOVED could not load local data",err); }
@@ -203,6 +206,12 @@ function updateWorkoutMetrics(){
 }
 
 /* ============ HOME ============ */
+function nextFeatureTip(){
+  if(state.workouts.length>=3&&!state.dismissedTips.includes("backup"))return{id:"backup",text:"Your workouts stay on this device. Export a backup in Settings whenever you like."};
+  if(state.workouts.length>=1&&!state.dismissedTips.includes("history"))return{id:"history",text:"Tap a past workout to edit it or save it as a routine."};
+  return null;
+}
+function dismissFeatureTip(id){state.dismissedTips.push(id);save();renderHome();}
 function renderHome(){
   const sessions=state.workouts;
   const week=sessionsInWeek(0);
@@ -211,6 +220,12 @@ function renderHome(){
   const lt=lifetime();const eq=equivalence(lt);const{cur,nx}=tierFor(lt);
   const R=32,C=2*Math.PI*R,prog=nx?clamp((lt-cur.at)/(nx.at-cur.at),0,1):1;
   let html=`<p class="greet">${greeting()}${state.name?`, <b>${esc(state.name)}</b>`:""}.</p>`;
+  if(state.demo){
+    html+=`<div class="nudge" style="margin-bottom:13px"><div class="dot spectrum-bg"></div><div><div class="t">Sample week</div><p>You're looking at demo workouts. Your previous data can be restored${localStorage.getItem(DEMO_BACKUP_KEY)?"":" only if you saved a backup before loading this sample"}.</p><button class="mini-action" onclick="restorePreDemo()">${localStorage.getItem(DEMO_BACKUP_KEY)?"Restore my data":"Remove demo workouts"} →</button></div></div>`;
+  }else{
+    const tip=nextFeatureTip();
+    if(tip)html+=`<div class="feature-tip" role="note"><span>✦ ${tip.text}</span><button onclick="dismissFeatureTip('${tip.id}')" aria-label="Dismiss tip">×</button></div>`;
+  }
 
   if(state.active){
     html+=`<button class="active-banner" onclick="go('workout')"><span class="live-dot"></span><span><b>${state.active.editingIndex!==null?"Editing a session":"Session in progress"}</b><p>${sessionTitle(state.active)} · ${fmt(loggedVolume(state.active))} ${state.unit} · ${fmtMinutes(cardioSeconds(state.active))} cardio min</p></span><span class="chev">›</span></button>`;
@@ -608,7 +623,8 @@ function openSettings(){
   <div class="srow"><div class="lab">Rest length</div><div class="toggle">${[60,90,120].map(n=>`<button class="${state.restDur===n?'on spectrum-bg':''}" onclick="setRest(${n})">${n}s</button>`).join("")}</div></div>
   <div class="srow"><div class="lab">Auto-collapse<small>Fold an exercise when every set is done</small></div><div class="toggle"><button class="${state.autoCollapse!==false?'on spectrum-bg':''}" onclick="setBool('autoCollapse',true)">On</button><button class="${state.autoCollapse===false?'on spectrum-bg':''}" onclick="setBool('autoCollapse',false)">Off</button></div></div>
   <div class="srow" id="install-row"><div class="lab">Install app<small>Add MOVED to your home screen</small></div><button class="btn btn-ghost btn-small" onclick="doInstall()">Install</button></div>
-  <div class="srow"><div class="lab">Demo data<small>Replaces current sessions</small></div><button class="btn btn-ghost btn-small" onclick="setDemo()">Load</button></div>
+  <div class="srow"><div class="lab">Demo data<small>Preview a sample week; you can restore your data</small></div><button class="btn btn-ghost btn-small" onclick="setDemo()">Load</button></div>
+  ${state.demo?`<div class="srow"><div class="lab">Leave demo<small>${localStorage.getItem(DEMO_BACKUP_KEY)?"Restore the data from before the sample week":"Remove sample workouts"}</small></div><button class="btn btn-ghost btn-small" onclick="restorePreDemo()">${localStorage.getItem(DEMO_BACKUP_KEY)?"Restore":"Remove"}</button></div>`:""}
   <div class="srow"><div class="lab">Export data<small>Download history and routines</small></div><button class="btn btn-ghost btn-small" onclick="exportData()">Export</button></div>
   <div class="srow"><div class="lab">Import data</div><button class="btn btn-ghost btn-small" onclick="document.getElementById('imp').click()">Import</button><input type="file" id="imp" accept="application/json" class="hide" onchange="importData(this)"></div>
   <div class="srow" style="border:0"><div class="lab" style="color:#ff82c8">Clear everything<small>Deletes sessions and routines</small></div><button class="btn btn-danger btn-small" onclick="wipe()">Clear</button></div>
@@ -626,11 +642,23 @@ function setDistance(v){state.distanceUnit=v;save();openSettings();}
 function setAnim(v){state.anim=v;save();applyAnim();openSettings();}
 function setBool(k,v){state[k]=v;if(k==="restTimer"&&!v)cancelRest();save();openSettings();}
 function setRest(n){state.restDur=n;save();openSettings();}
-function setDemo(){if(!confirm("Replace current sessions with a sample week?"))return;loadSampleData();state.demo=true;state.active=null;save();closeSheet();go("home");toast("Sample week loaded");}
+function setDemo(){if(state.active){toast("Finish or discard your current session first");return;}if(!confirm("Preview a sample week? Your current data will be saved so you can restore it."))return;loadSample();closeSheet();}
 function exportData(){const blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="moved-2-data.json";a.click();URL.revokeObjectURL(a.href);toast("Exported");}
-function importData(input){const f=input.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);state={...structuredCloneSafe(DEFAULTS),...d,workouts:(d.workouts||[]).map(migrateSession),active:null};save();closeSheet();render();toast("Imported");}catch(_){toast("Could not read that file");}};r.readAsText(f);}
-function wipe(){if(!confirm("Delete every session and saved routine? This cannot be undone."))return;state={...structuredCloneSafe(DEFAULTS),name:state.name,unit:state.unit,distanceUnit:state.distanceUnit};save();closeSheet();go("home");}
-function loadSample(){loadSampleData();state.demo=true;save();go("home");toast("Sample week loaded");}
+function importData(input){const f=input.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);state={...structuredCloneSafe(DEFAULTS),...d,workouts:(d.workouts||[]).map(migrateSession),active:null};localStorage.removeItem(DEMO_BACKUP_KEY);save();closeSheet();render();toast("Imported");}catch(_){toast("Could not read that file");}};r.readAsText(f);}
+function wipe(){if(!confirm("Delete every session and saved routine? This cannot be undone."))return;localStorage.removeItem(DEMO_BACKUP_KEY);state={...structuredCloneSafe(DEFAULTS),name:state.name,unit:state.unit,distanceUnit:state.distanceUnit,onboardingSeen:true};save();closeSheet();go("home");}
+function loadSample(){
+  if(state.active){toast("Finish or discard your current session first");return;}
+  if(!state.demo){try{localStorage.setItem(DEMO_BACKUP_KEY,JSON.stringify(state));}catch(_){toast("Could not save a backup. Demo not loaded.");return;}}
+  loadSampleData();state.demo=true;save();go("home");toast("Sample week loaded");
+}
+function restorePreDemo(){
+  const raw=localStorage.getItem(DEMO_BACKUP_KEY);
+  if(!state.demo)return;
+  if(!confirm(raw?"Restore your data from before the sample week? Any changes made while viewing the demo will be discarded.":"Remove the demo workouts? There is no earlier backup available on this device."))return;
+  if(raw){try{const previous=JSON.parse(raw);state={...structuredCloneSafe(DEFAULTS),...previous,workouts:(previous.workouts||[]).map(migrateSession),active:previous.active?migrateSession(previous.active):null};}catch(_){toast("Could not read the previous data. Nothing changed.");return;}}
+  else{state.workouts=[];state.demo=false;}
+  localStorage.removeItem(DEMO_BACKUP_KEY);state.demo=false;save();closeSheet();go("home");toast(raw?"Previous data restored":"Demo workouts removed");
+}
 function loadSampleData(){
   const mk=(days,type,exercises=[],cardio=[])=>({id:Date.now()-days*1e6,date:new Date(Date.now()-days*864e5).toISOString(),endedAt:null,durationSec:2700,type,title:"",notes:"",exercises,cardio});
   const e=(name,sets,effort="Right")=>{const row=findEx(name)||[];return{name,cat:row[1]||"Custom",tip:row[2]||"",muscle:row[3]||"Other",note:"",effort,collapsed:true,sets:sets.map(([w,r,warmup=false])=>({w,r,warmup,done:true}))};};
