@@ -73,7 +73,9 @@
     if(type!=="strength")html+=(a.cardio||[]).map((c,i)=>renderCardioBlock(c,i)).join("");
     if(type!=="cardio")html+=`<button class="btn btn-ghost" onclick="openPicker()" style="margin-top:3px"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add exercise</button>`;
     html+=`<div style="height:93px"></div><div class="wk-actions"><button class="btn btn-ghost" style="width:auto" onclick="cancelWorkout()">${editing?"Cancel":"Discard"}</button><button class="btn btn-primary spectrum-bg" onclick="finishWorkout()"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>${editing?"Save changes":"Finish"}</button></div>`;
+    const focusScroll=$("#view .fac-focus-scroll")?.scrollTop;
     $("#view").innerHTML=html;
+    if(focusScroll!==undefined){const scroll=$("#view .fac-focus-scroll");if(scroll)scroll.scrollTop=focusScroll;}
     document.body.classList.toggle("fac-focus-open",FAC.focusExerciseIndex!==null);
     startLiveTimer();setTimeout(FAC.bindSetGestures,0);
   };
@@ -95,7 +97,8 @@
     const currentSet=e.sets[pendingIndex]||e.sets[e.sets.length-1];
     const activeRest=typeof rest!=="undefined"&&rest.endsAt>Date.now();
     const restLabel=activeRest?fmtDurSeconds((rest.endsAt-Date.now())/1000):(state.restTimer===false?"Off":"Ready");
-    let html=`<div class="fac-focus-overlay" role="dialog" aria-modal="true" aria-labelledby="fac-focus-title">
+    const entering=!$("#view .fac-focus-overlay");
+    let html=`<div class="fac-focus-overlay ${entering?'fac-focus-enter':''}" role="dialog" aria-modal="true" aria-labelledby="fac-focus-title">
       <div class="fac-focus-topbar">
         <button class="fac-focus-back" onclick="facCloseExerciseFocus()"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg><span>Workout</span></button>
         <span class="fac-focus-position">Exercise ${ei+1} of ${a.exercises.length}</span>
