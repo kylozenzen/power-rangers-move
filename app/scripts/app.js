@@ -9,13 +9,14 @@ const DEFAULTS = {
   unit:"lb",
   distanceUnit:"mi",
   anim:true,
-  restTimer:true,
+  restTimer:false,
   restDur:90,
   autoCollapse:true,
   demo:false,
   workouts:[],
   active:null,
-  customRoutines:[]
+  customRoutines:[],
+  onboardingSeen:false
 };
 let state = structuredCloneSafe(DEFAULTS);
 
@@ -80,6 +81,7 @@ function load(){
     if(!raw)return;
     const parsed=JSON.parse(raw);
     state={...structuredCloneSafe(DEFAULTS),...parsed};
+    state.onboardingSeen=parsed.onboardingSeen??true;
     state.workouts=(parsed.workouts||[]).map(migrateSession);
     state.active=parsed.active?migrateSession(parsed.active):null;
     state.customRoutines=Array.isArray(parsed.customRoutines)?parsed.customRoutines:[];
@@ -305,12 +307,12 @@ const CARDIO_ACTIVITIES=[
   ["Walk","🚶"],["Treadmill","🏃"],["Bike","🚲"],["Elliptical","⭕"],["Rower","🚣"],["Stair Climber","🪜"],["Swim","🏊"],["Other","✨"]
 ];
 const MUSCLE_ICONS={Chest:"◢",Back:"◣",Shoulders:"◆",Arms:"⌁",Legs:"▰",Glutes:"●",Core:"◎"};
-let startFlow={mode:null,muscles:[],fullBody:false,minutes:25,preview:[],seed:0,activity:"Walk",cardioMinutes:15,effort:"Steady"};
-function resetStartFlow(){startFlow={mode:null,muscles:[],fullBody:false,minutes:25,preview:[],seed:0,activity:"Walk",cardioMinutes:15,effort:"Steady"};}
+let startFlow={mode:null,muscles:[],fullBody:false,minutes:null,preview:[],seed:0,activity:"Walk",cardioMinutes:0,effort:"Steady"};
+function resetStartFlow(){startFlow={mode:null,muscles:[],fullBody:false,minutes:null,preview:[],seed:0,activity:"Walk",cardioMinutes:0,effort:"Steady"};}
 function launchMode(mode){resetStartFlow();startFlow.mode=mode;go("workout");}
 function launchMuscle(m){resetStartFlow();startFlow.mode="strength";startFlow.muscles=[m];rebuildPreview();go("workout");}
 function launchShort(){resetStartFlow();startFlow.mode="strength";startFlow.minutes=15;startFlow.fullBody=true;rebuildPreview();go("workout");}
-function launchQuickCardio(){resetStartFlow();startFlow.mode="cardio";startFlow.cardioMinutes=10;startFlow.effort="Easy";go("workout");}
+function launchQuickCardio(){resetStartFlow();startFlow.mode="cardio";startFlow.effort="Easy";go("workout");}
 function renderWorkout(){
   if(state.active)return renderActiveWorkout();
   if(!startFlow.mode)return renderModeChooser();
@@ -319,14 +321,14 @@ function renderWorkout(){
 }
 function renderModeChooser(){
   const last=state.workouts[state.workouts.length-1];
-  let html=`<div class="mode-hero"><div class="glyph">↗</div><h2>Move something.</h2><p>Choose the kind of session. No rings will be disappointed by your decision.</p></div><div class="mode-list">
+  let html=`<div class="mode-hero"><div class="glyph">↗</div><h2>Move something.</h2><p>Start now, or build a plan if you feel like it.</p><button class="btn btn-primary spectrum-bg" style="margin-top:16px" onclick="startEmptyStrength()">Start workout — no setup</button></div><div class="mode-list">
     <button class="mode-card" onclick="chooseMode('strength')"><span class="icon">🏋️</span><span><h3>Strength</h3><p>Pick muscles and let MOVED assemble a reasonable plan.</p></span><span class="arrow">›</span></button>
     <button class="mode-card" onclick="chooseMode('cardio')"><span class="icon">🏃</span><span><h3>Cardio</h3><p>Walk, pedal, climb, row, or aggressively go nowhere.</p></span><span class="arrow">›</span></button>
     <button class="mode-card" onclick="chooseMode('mixed')"><span class="icon">⚡</span><span><h3>Both</h3><p>Strength first, cardio finisher, dramatic soundtrack optional.</p></span><span class="arrow">›</span></button>
   </div>`;
   if(last){html+=`<div class="section-h"><h2>Quick return</h2></div><button class="quick-card" onclick="repeatLast()"><span class="qicon">↻</span><span class="qcopy"><b>Repeat last session</b><small>${esc(sessionSubtitle(last))}</small></span><span class="qact">LOAD</span></button>`;}
   if(state.customRoutines.length){html+=`<div class="section-h"><h2>Your routines</h2></div>`+state.customRoutines.map(r=>`<div class="quick-card"><button class="qicon" onclick="startFromRoutine('${r.id}')">★</button><button class="qcopy" onclick="startFromRoutine('${r.id}')"><b>${esc(r.name)}</b><small>${(r.exercises||[]).length} exercises${r.cardio?` · ${r.cardio.activity}`:""}</small></button><button class="delete-mini" onclick="deleteRoutine('${r.id}')" aria-label="Delete routine">×</button></div>`).join("");}
-  html+=`<div class="section-h"><h2>Starter routines</h2></div><div class="preview-list">`+TEMPLATES.map(t=>`<button class="quick-card" onclick="startFromTemplate('${t.id}')"><span class="qicon">▦</span><span class="qcopy"><b>${esc(t.name)}</b><small>${esc(t.tag)}</small></span><span class="qact">${t.exercises.length} MOVES</span></button>`).join("")+`</div><button class="btn btn-quiet" style="margin-top:12px" onclick="startEmptyStrength()">Start completely empty</button>`;
+  html+=`<div class="section-h"><h2>Starter routines</h2></div><div class="preview-list">`+TEMPLATES.map(t=>`<button class="quick-card" onclick="startFromTemplate('${t.id}')"><span class="qicon">▦</span><span class="qcopy"><b>${esc(t.name)}</b><small>${esc(t.tag)}</small></span><span class="qact">${t.exercises.length} MOVES</span></button>`).join("")+`</div>`;
   $("#view").innerHTML=html;
 }
 function chooseMode(mode){startFlow.mode=mode;renderWorkout();}
@@ -341,7 +343,7 @@ function renderStrengthBuilder(){
   });
   if(startFlow.muscles.length===3||startFlow.fullBody)html+=`<button class="muscle-chip full ${startFlow.fullBody?'on spectrum-bg':''}" onclick="toggleFullBody()">✦ ${startFlow.fullBody?'Full body selected':'Turn this into full body'}</button>`;
   html+=`</div></div>`;
-  html+=`<div class="builder-section"><div class="builder-label"><b>Time available</b><span>approximate, not legally binding</span></div><div class="choice-chips">${[15,25,40,60].map(n=>`<button class="choice-chip ${startFlow.minutes===n?'on spectrum-bg':''}" onclick="setBuildMinutes(${n})">${n} min</button>`).join("")}</div></div>`;
+  html+=`<div class="builder-section"><div class="builder-label"><b>Time available</b><span>only used to size a suggested plan</span></div><div class="choice-chips"><button class="choice-chip ${startFlow.minutes===null?'on spectrum-bg':''}" onclick="setBuildMinutes(null)">Doesn't matter</button>${[15,25,40,60].map(n=>`<button class="choice-chip ${startFlow.minutes===n?'on spectrum-bg':''}" onclick="setBuildMinutes(${n})">${n} min</button>`).join("")}</div></div>`;
   html+=`<div class="builder-section"><div class="builder-label"><b>Suggested plan</b><span>${startFlow.preview.length?startFlow.preview.length+" exercises":"choose muscles"}</span></div>`;
   if(startFlow.preview.length){
     html+=`<div class="preview-list">`+startFlow.preview.map((name,i)=>{const row=findEx(name)||[];return`<div class="preview-item"><span class="preview-num">${i+1}</span><span><b>${esc(name)}</b><small>${row[3]||"Other"} · ${row[1]||"Custom"}</small></span><span class="preview-actions"><button onclick="movePreview(${i},-1)" aria-label="Move up">↑</button><button onclick="replacePreview(${i})" aria-label="Swap">↻</button><button onclick="movePreview(${i},1)" aria-label="Move down">↓</button></span></div>`;}).join("")+`</div><div class="preview-toolbar"><button class="btn btn-quiet" onclick="shufflePreview()">Shuffle plan</button><button class="btn btn-quiet" onclick="clearPreview()">Choose myself</button></div>`;
@@ -349,16 +351,16 @@ function renderStrengthBuilder(){
   html+=`</div>`;
   if(both)html+=cardioBuilderMarkup(true);
   const canStart=startFlow.preview.length||(!startFlow.muscles.length&&!startFlow.fullBody);
-  html+=`<div class="builder-summary"><div class="row"><span>Strength</span><b>${startFlow.preview.length?startFlow.preview.length+" exercises":"empty session"}</b></div>${both?`<div class="row"><span>Cardio finisher</span><b>${startFlow.activity} · ${startFlow.cardioMinutes} min · ${startFlow.effort}</b></div>`:""}</div><button class="btn btn-primary spectrum-bg" style="margin-top:12px" ${canStart?'':'disabled'} onclick="startBuiltWorkout()">${both?'Start combo session':'Start strength session'}</button>`;
+  html+=`<div class="builder-summary"><div class="row"><span>Strength</span><b>${startFlow.preview.length?startFlow.preview.length+" exercises":"empty session"}</b></div>${both?`<div class="row"><span>Cardio finisher</span><b>${startFlow.activity} · ${startFlow.cardioMinutes?startFlow.cardioMinutes+' min target':'no time target'} · ${startFlow.effort}</b></div>`:""}</div><button class="btn btn-primary spectrum-bg" style="margin-top:12px" ${canStart?'':'disabled'} onclick="startBuiltWorkout()">${both?'Start combo session':'Start strength session'}</button>`;
   $("#view").innerHTML=html;
 }
 function cardioBuilderMarkup(compact=false){
   return `<div class="builder-section"><div class="builder-label"><b>${compact?"Cardio finisher":"Activity"}</b><span>${compact?"it can be short":"pick your machine or lack thereof"}</span></div><div class="activity-grid">${CARDIO_ACTIVITIES.map(([name,icon])=>`<button class="activity-card ${startFlow.activity===name?'on':''}" onclick="setActivity('${name}')"><span class="ai">${icon}</span><b>${name}</b></button>`).join("")}</div></div>
-  <div class="builder-section"><div class="builder-label"><b>Target time</b><span>you may stop early and remain a person</span></div><div class="choice-chips">${[10,15,20,30,45,60].map(n=>`<button class="choice-chip ${startFlow.cardioMinutes===n?'on spectrum-bg':''}" onclick="setCardioMinutes(${n})">${n} min</button>`).join("")}</div></div>
+  <div class="builder-section"><div class="builder-label"><b>Target time</b><span>optional; the timer counts up</span></div><div class="choice-chips"><button class="choice-chip ${!startFlow.cardioMinutes?'on spectrum-bg':''}" onclick="setCardioMinutes(0)">No target</button>${[10,15,20,30,45,60].map(n=>`<button class="choice-chip ${startFlow.cardioMinutes===n?'on spectrum-bg':''}" onclick="setCardioMinutes(${n})">${n} min</button>`).join("")}</div></div>
   <div class="builder-section"><div class="builder-label"><b>Effort</b></div><div class="choice-chips">${["Easy","Steady","Hard"].map(n=>`<button class="choice-chip ${startFlow.effort===n?'on spectrum-bg':''}" onclick="setBuildEffort('${n}')">${n}</button>`).join("")}</div></div>`;
 }
 function renderCardioBuilder(){
-  const html=`<div class="builder-top"><div><h2>Start cardio</h2><p>Move through space or remain heroically stationary on a machine.</p></div><button class="builder-back" onclick="resetStartFlow();renderWorkout()"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button></div>${cardioBuilderMarkup(false)}<div class="builder-summary"><div class="row"><span>Plan</span><b>${startFlow.activity}</b></div><div class="row"><span>Target</span><b>${startFlow.cardioMinutes} min · ${startFlow.effort}</b></div></div><button class="btn btn-primary spectrum-bg" style="margin-top:12px" onclick="startBuiltWorkout()">Start ${esc(startFlow.activity.toLowerCase())}</button>`;
+  const html=`<div class="builder-top"><div><h2>Start cardio</h2><p>Move through space or remain heroically stationary on a machine.</p></div><button class="builder-back" onclick="resetStartFlow();renderWorkout()"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button></div>${cardioBuilderMarkup(false)}<div class="builder-summary"><div class="row"><span>Plan</span><b>${startFlow.activity}</b></div><div class="row"><span>Target</span><b>${startFlow.cardioMinutes?startFlow.cardioMinutes+' min':'None'} · ${startFlow.effort}</b></div></div><button class="btn btn-primary spectrum-bg" style="margin-top:12px" onclick="startBuiltWorkout()">Start ${esc(startFlow.activity.toLowerCase())}</button>`;
   $("#view").innerHTML=html;
 }
 function toggleMuscle(m){
@@ -369,7 +371,7 @@ function setBuildMinutes(n){startFlow.minutes=n;rebuildPreview();renderWorkout()
 function setActivity(n){startFlow.activity=n;renderWorkout();}
 function setCardioMinutes(n){startFlow.cardioMinutes=n;renderWorkout();}
 function setBuildEffort(n){startFlow.effort=n;renderWorkout();}
-function desiredExerciseCount(){return startFlow.minutes<=15?3:startFlow.minutes<=25?4:startFlow.minutes<=40?5:6;}
+function desiredExerciseCount(){return startFlow.minutes===null?4:startFlow.minutes<=15?3:startFlow.minutes<=25?4:startFlow.minutes<=40?5:6;}
 function selectedMuscles(){return startFlow.fullBody?["Chest","Back","Legs","Glutes","Shoulders","Core"]:startFlow.muscles;}
 function musclePool(m){
   return LIB.filter(row=>row[3]===m).map(row=>row[0]);
@@ -402,17 +404,17 @@ function startBuiltWorkout(){
   const type=startFlow.mode||"strength";const a=blankSession(type);const muscles=selectedMuscles();
   if(type!=="cardio")startFlow.preview.forEach(n=>addExFromName(n,a));
   if(a.exercises.length)a.exercises[0].collapsed=false;
-  if(type!=="strength")a.cardio.push(makeCardio(startFlow.activity,startFlow.cardioMinutes,startFlow.effort,type==="cardio"));
+  if(type!=="strength")a.cardio.push(makeCardio(startFlow.activity,startFlow.cardioMinutes,startFlow.effort));
   if(type==="strength"&&muscles.length)a.title=startFlow.fullBody?"Full Body":muscles.join(" + ");
   if(type==="mixed")a.title=`${startFlow.fullBody?"Full Body":muscles.join(" + ")||"Strength"} + ${startFlow.activity}`;
   state.active=a;save();requestWake();resetStartFlow();renderWorkout();
   if(type==="strength"&&!a.exercises.length)setTimeout(openPicker,80);
 }
-function startEmptyStrength(){state.active=blankSession("strength");save();requestWake();renderWorkout();setTimeout(openPicker,70);}
+function startEmptyStrength(){state.active=blankSession("strength");save();requestWake();go("workout");}
 function repeatLast(){const last=state.workouts[state.workouts.length-1];if(!last)return;startFromSession(last);toast("Loaded your last session");}
 function startFromSession(source){
   const a=blankSession(sessionType(source));(source.exercises||[]).forEach(e=>addExFromName(e.name,a));if(a.exercises.length)a.exercises[0].collapsed=false;
-  a.cardio=(source.cardio||[]).map(c=>makeCardio(c.activity,Math.max(5,Math.round(cardioElapsed(c)/60)||c.targetMinutes||15),c.effort||"Steady",sessionType(source)==="cardio"));
+  a.cardio=(source.cardio||[]).map(c=>makeCardio(c.activity,c.targetMinutes||0,c.effort||"Steady"));
   state.active=a;save();requestWake();resetStartFlow();go("workout");
 }
 function startFromTemplate(id){const t=TEMPLATES.find(x=>x.id===id);if(!t)return;const a=blankSession("strength");a.title=t.name;t.exercises.forEach(n=>addExFromName(n,a));if(a.exercises.length)a.exercises[0].collapsed=false;state.active=a;save();requestWake();resetStartFlow();go("workout");toast(t.name+" loaded");}
@@ -451,11 +453,12 @@ function renderExercises(a){
 }
 function renderCardioBlock(c,i){
   const icon=CARDIO_ACTIVITIES.find(x=>x[0]===c.activity)?.[1]||"✨";const target=(+c.targetMinutes||0)*60,pct=target?clamp(cardioElapsed(c)/target*100,0,100):0;
-  return `<div class="cardio-card"><div class="cardio-top"><div class="cardio-icon">${icon}</div><div><h3>${esc(c.activity)}</h3><p>${esc(c.effort)} effort${c.targetMinutes?` · ${c.targetMinutes} minute target`:""}</p></div></div><div class="cardio-timer"><div class="cardio-time mono" id="cardio-time-${i}">${fmtDurSeconds(cardioElapsed(c))}</div><div class="cardio-target">${c.running?"Currently moving":"Timer paused"}</div><div class="cardio-progress"><div class="fill spectrum-bg" id="cardio-fill-${i}" style="width:${pct}%"></div></div></div><div class="cardio-controls"><button class="btn ${c.running?'btn-ghost':'btn-primary spectrum-bg'}" onclick="toggleCardio(${i})">${c.running?'Pause':'Start / resume'}</button><button class="round-control" onclick="adjustCardioTime(${i},-60)">−1m</button><button class="round-control" onclick="adjustCardioTime(${i},60)">+1m</button></div><div class="cardio-fields"><div class="field"><label>Distance</label><input type="number" inputmode="decimal" value="${c.distance||''}" placeholder="optional" onchange="setCardioField(${i},'distance',this.value)"></div><div class="field"><label>Distance unit</label><select onchange="setCardioField(${i},'distanceUnit',this.value)"><option ${c.distanceUnit==='mi'?'selected':''}>mi</option><option ${c.distanceUnit==='km'?'selected':''}>km</option></select></div><div class="field"><label>Incline</label><input value="${esc(c.incline)}" placeholder="optional" onchange="setCardioField(${i},'incline',this.value)"></div><div class="field"><label>Resistance</label><input value="${esc(c.resistance)}" placeholder="optional" onchange="setCardioField(${i},'resistance',this.value)"></div><div class="field full"><label>Notes</label><textarea placeholder="Anything worth remembering?" onchange="setCardioField(${i},'notes',this.value)">${esc(c.notes)}</textarea></div></div><div class="pace-line"><span>Pace</span><b id="cardio-pace-${i}">${paceText(c)}</b></div></div>`;
+  return `<div class="cardio-card"><div class="cardio-top"><div class="cardio-icon">${icon}</div><div><h3>${esc(c.activity)}</h3><p>${esc(c.effort)} effort${c.targetMinutes?` · ${c.targetMinutes} minute target`:""}</p></div></div><div class="cardio-timer"><div class="cardio-time mono" id="cardio-time-${i}">${fmtDurSeconds(cardioElapsed(c))}</div><div class="cardio-target">${c.running?"Currently moving":"Timer ready"}</div>${target?`<div class="cardio-progress"><div class="fill spectrum-bg" id="cardio-fill-${i}" style="width:${pct}%"></div></div>`:""}</div><div class="cardio-controls"><button class="btn ${c.running?'btn-ghost':'btn-primary spectrum-bg'}" onclick="toggleCardio(${i})">${c.running?'Pause':'Start / resume'}</button><button class="round-control" onclick="adjustCardioTime(${i},-60)">−1m</button><button class="round-control" onclick="adjustCardioTime(${i},60)">+1m</button></div><div class="cardio-fields"><div class="field"><label>Duration (minutes)</label><input type="number" min="0" step="0.1" inputmode="decimal" value="${c.running?'':+(cardioElapsed(c)/60).toFixed(1)||''}" placeholder="Log after the fact" onchange="setCardioDuration(${i},this.value)"></div><div class="field"><label>Distance</label><input type="number" inputmode="decimal" value="${c.distance||''}" placeholder="optional" onchange="setCardioField(${i},'distance',this.value)"></div><div class="field"><label>Distance unit</label><select onchange="setCardioField(${i},'distanceUnit',this.value)"><option ${c.distanceUnit==='mi'?'selected':''}>mi</option><option ${c.distanceUnit==='km'?'selected':''}>km</option></select></div><div class="field"><label>Incline</label><input value="${esc(c.incline)}" placeholder="optional" onchange="setCardioField(${i},'incline',this.value)"></div><div class="field"><label>Resistance</label><input value="${esc(c.resistance)}" placeholder="optional" onchange="setCardioField(${i},'resistance',this.value)"></div><div class="field full"><label>Notes</label><textarea placeholder="Anything worth remembering?" onchange="setCardioField(${i},'notes',this.value)">${esc(c.notes)}</textarea></div></div><div class="pace-line"><span>Pace</span><b id="cardio-pace-${i}">${paceText(c)}</b></div></div>`;
 }
 function pauseCardio(c){if(!c.running)return;c.durationSec=cardioElapsed(c);c.running=false;c.startedAt=null;}
 function toggleCardio(i){const c=state.active.cardio[i];if(c.running)pauseCardio(c);else{c.running=true;c.startedAt=Date.now();}save();renderWorkout();haptic();}
 function adjustCardioTime(i,delta){const c=state.active.cardio[i];if(c.running)pauseCardio(c);c.durationSec=Math.max(0,(+c.durationSec||0)+delta);save();renderWorkout();}
+function setCardioDuration(i,value){const c=state.active.cardio[i];if(c.running)pauseCardio(c);c.durationSec=Math.max(0,(parseFloat(value)||0)*60);save();renderWorkout();}
 function setCardioField(i,key,value){const c=state.active.cardio[i];c[key]=["distance"].includes(key)?Math.max(0,parseFloat(value)||0):value;save();const p=$("#cardio-pace-"+i);if(p)p.textContent=paceText(c);}
 function cancelWorkout(){
   if(!confirm(state.active.editingIndex!==null?"Discard these edits? The saved session will stay unchanged.":"Discard this session? Nothing will be saved."))return;
@@ -477,12 +480,13 @@ function setExerciseNote(i,v){state.active.exercises[i].note=v;save();}
 function setEffort(i,v){state.active.exercises[i].effort=state.active.exercises[i].effort===v?"":v;save();renderWorkout();}
 function saveActiveRoutine(){
   const a=state.active;if(!a)return;const name=prompt("Name this routine",sessionTitle(a));if(!name)return;
-  state.customRoutines.push({id:String(Date.now()),name:name.trim(),exercises:a.exercises.map(e=>e.name),cardio:a.cardio[0]?{activity:a.cardio[0].activity,targetMinutes:a.cardio[0].targetMinutes||15,effort:a.cardio[0].effort}:null});save();toast("Routine saved");
+  state.customRoutines.push({id:String(Date.now()),name:name.trim(),exercises:a.exercises.map(e=>e.name),cardio:a.cardio[0]?{activity:a.cardio[0].activity,targetMinutes:a.cardio[0].targetMinutes||0,effort:a.cardio[0].effort}:null});save();toast("Routine saved");
 }
 function finishWorkout(){
-  const a=state.active;if(!a)return;(a.cardio||[]).forEach(pauseCardio);
+  const a=state.active;if(!a)return;
   const cleaned={...structuredCloneSafe(a),exercises:a.exercises.map(e=>({...structuredCloneSafe(e),collapsed:true,sets:e.sets.filter(s=>s.done&&+s.r>0)})).filter(e=>e.sets.length),cardio:a.cardio.map(c=>({...structuredCloneSafe(c),durationSec:cardioElapsed(c),running:false,startedAt:null})).filter(c=>c.durationSec>=10||c.distance>0)};
   if(!cleaned.exercises.length&&!cleaned.cardio.length){toast("Complete a set or log some cardio first");return;}
+  (a.cardio||[]).forEach(pauseCardio);
   cleaned.type=cleaned.exercises.length&&cleaned.cardio.length?"mixed":cleaned.cardio.length?"cardio":"strength";
   cleaned.durationSec=cleaned.editingIndex!==null?(cleaned.originalDurationSec||cleaned.durationSec):Math.max(0,(Date.now()-(a.startedAt||Date.now()))/1000);
   cleaned.endedAt=new Date().toISOString();delete cleaned.startedAt;delete cleaned.originalDurationSec;
@@ -493,7 +497,7 @@ function finishWorkout(){
 
 /* ============ REST TIMER ============ */
 let rest={endsAt:0,dur:90,iv:null};
-function startRest(){if(state.restTimer===false)return;rest.dur=state.restDur||90;rest.endsAt=Date.now()+rest.dur*1000;$("#rest")?.classList.add("show");clearInterval(rest.iv);tickRest();rest.iv=setInterval(tickRest,250);}
+function startRest(){if(state.restTimer!==true)return;rest.dur=state.restDur||90;rest.endsAt=Date.now()+rest.dur*1000;$("#rest")?.classList.add("show");clearInterval(rest.iv);tickRest();rest.iv=setInterval(tickRest,250);}
 function tickRest(){const ms=rest.endsAt-Date.now();if(ms<=0){haptic([20,50,20]);cancelRest();return;}const s=Math.ceil(ms/1000),m=Math.floor(s/60),ss=String(s%60).padStart(2,"0");if($("#rest-time"))$("#rest-time").textContent=`${m}:${ss}`;if($("#rest-fill"))$("#rest-fill").style.width=clamp(ms/(rest.dur*1000)*100,0,100)+"%";}
 function restAdjust(d){if(!rest.endsAt)return;rest.endsAt+=d*1000;if(d>0)rest.dur+=d;tickRest();}
 function restSkip(){cancelRest();}
@@ -559,7 +563,7 @@ function openDetail(idx){
 }
 function editSession(idx){const w=structuredCloneSafe(state.workouts[idx]);w.editingIndex=idx;w.originalDurationSec=w.durationSec;w.startedAt=Date.now();w.cardio=(w.cardio||[]).map(c=>({...c,running:false,startedAt:null}));if(w.exercises.length)w.exercises.forEach((e,i)=>e.collapsed=i!==0);state.active=migrateSession(w);save();closeSheet();go("workout");}
 function deleteSession(idx){if(!confirm("Delete this session permanently?"))return;state.workouts.splice(idx,1);save();closeSheet();renderHome();}
-function saveSessionRoutine(idx){const w=state.workouts[idx],name=prompt("Name this routine",sessionTitle(w));if(!name)return;state.customRoutines.push({id:String(Date.now()),name:name.trim(),exercises:w.exercises.map(e=>e.name),cardio:w.cardio[0]?{activity:w.cardio[0].activity,targetMinutes:Math.max(5,fmtMinutes(cardioElapsed(w.cardio[0]))),effort:w.cardio[0].effort}:null});save();closeSheet();toast("Routine saved");}
+function saveSessionRoutine(idx){const w=state.workouts[idx],name=prompt("Name this routine",sessionTitle(w));if(!name)return;state.customRoutines.push({id:String(Date.now()),name:name.trim(),exercises:w.exercises.map(e=>e.name),cardio:w.cardio[0]?{activity:w.cardio[0].activity,targetMinutes:w.cardio[0].targetMinutes||0,effort:w.cardio[0].effort}:null});save();closeSheet();toast("Routine saved");}
 
 /* ============ ANALYTICS ============ */
 function renderStats(){
@@ -600,7 +604,7 @@ function openSettings(){
   <div class="srow"><div class="lab">Weight units</div><div class="toggle"><button class="${state.unit==='lb'?'on spectrum-bg':''}" onclick="setUnit('lb')">lb</button><button class="${state.unit==='kg'?'on spectrum-bg':''}" onclick="setUnit('kg')">kg</button></div></div>
   <div class="srow"><div class="lab">Distance units</div><div class="toggle"><button class="${state.distanceUnit==='mi'?'on spectrum-bg':''}" onclick="setDistance('mi')">mi</button><button class="${state.distanceUnit==='km'?'on spectrum-bg':''}" onclick="setDistance('km')">km</button></div></div>
   <div class="srow"><div class="lab">Animated spectrum<small>Turn off to save battery</small></div><div class="toggle"><button class="${state.anim!==false?'on spectrum-bg':''}" onclick="setAnim(true)">On</button><button class="${state.anim===false?'on spectrum-bg':''}" onclick="setAnim(false)">Off</button></div></div>
-  <div class="srow"><div class="lab">Rest timer<small>Strategic doing nothing</small></div><div class="toggle"><button class="${state.restTimer!==false?'on spectrum-bg':''}" onclick="setBool('restTimer',true)">On</button><button class="${state.restTimer===false?'on spectrum-bg':''}" onclick="setBool('restTimer',false)">Off</button></div></div>
+  <div class="srow"><div class="lab">Rest timer<small>Optional countdown after a set</small></div><div class="toggle"><button class="${state.restTimer===true?'on spectrum-bg':''}" onclick="setBool('restTimer',true)">On</button><button class="${state.restTimer!==true?'on spectrum-bg':''}" onclick="setBool('restTimer',false)">Off</button></div></div>
   <div class="srow"><div class="lab">Rest length</div><div class="toggle">${[60,90,120].map(n=>`<button class="${state.restDur===n?'on spectrum-bg':''}" onclick="setRest(${n})">${n}s</button>`).join("")}</div></div>
   <div class="srow"><div class="lab">Auto-collapse<small>Fold an exercise when every set is done</small></div><div class="toggle"><button class="${state.autoCollapse!==false?'on spectrum-bg':''}" onclick="setBool('autoCollapse',true)">On</button><button class="${state.autoCollapse===false?'on spectrum-bg':''}" onclick="setBool('autoCollapse',false)">Off</button></div></div>
   <div class="srow" id="install-row"><div class="lab">Install app<small>Add MOVED to your home screen</small></div><button class="btn btn-ghost btn-small" onclick="doInstall()">Install</button></div>
@@ -610,6 +614,13 @@ function openSettings(){
   <div class="srow" style="border:0"><div class="lab" style="color:#ff82c8">Clear everything<small>Deletes sessions and routines</small></div><button class="btn btn-danger btn-small" onclick="wipe()">Clear</button></div>
   <p style="text-align:center;color:var(--ink3);font-size:10px;margin-top:22px;line-height:1.7">MOVED 2.0 · no accounts · no nags<br>Your data stays on your device.</p>`;refreshInstallRow();openSheet();
 }
+function showOnboarding(){
+  if(state.onboardingSeen||state.active||route!=="home"||$("#sheet").classList.contains("open"))return;
+  $("#sheet-title").textContent="Welcome to MOVED";
+  $("#sheet-body").innerHTML=`<div class="summary" style="text-align:left"><div class="crown">↗</div><h3>Do something. Log it. Leave.</h3><p>MOVED keeps your workouts on this device. No account, streaks, or plan required.</p><p style="margin-top:14px">Tap <b>Move</b> to start an empty workout, pick a suggested plan, or track cardio. Add exercises as you go; timers and targets are optional.</p><button class="btn btn-primary spectrum-bg" style="margin-top:22px" onclick="finishOnboarding(true)">Start a workout</button><button class="btn btn-quiet" style="margin-top:10px" onclick="finishOnboarding(false)">Look around first</button></div>`;
+  openSheet();
+}
+function finishOnboarding(start){state.onboardingSeen=true;save();closeSheet();if(start)startEmptyStrength();}
 function setUnit(v){state.unit=v;save();openSettings();render();}
 function setDistance(v){state.distanceUnit=v;save();openSettings();}
 function setAnim(v){state.anim=v;save();applyAnim();openSettings();}
@@ -634,7 +645,7 @@ function loadSampleData(){
 
 /* ============ SHEETS + DEVICE ============ */
 function openSheet(){$("#scrim").classList.add("open");$("#sheet").classList.add("open");}
-function closeSheet(){$("#scrim").classList.remove("open");$("#sheet").classList.remove("open");removePickerFooter();}
+function closeSheet(){if(!state.onboardingSeen&&$("#sheet-title").textContent==="Welcome to MOVED"){state.onboardingSeen=true;save();}$("#scrim").classList.remove("open");$("#sheet").classList.remove("open");removePickerFooter();}
 let wakeLock=null;
 async function requestWake(){try{if("wakeLock" in navigator)wakeLock=await navigator.wakeLock.request("screen");}catch(_){}}
 function releaseWake(){try{wakeLock?.release();wakeLock=null;}catch(_){}}
@@ -650,3 +661,4 @@ if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.ser
 window.addEventListener("load",()=>setTimeout(()=>$("#splash")?.classList.add("out"),650));
 setTimeout(()=>$("#splash")?.classList.add("out"),1200);
 render();
+setTimeout(showOnboarding,700);
